@@ -93,15 +93,33 @@ Request parse_args(const std::vector<std::string> &args, ProtocolType protocol)
         return request;
     }
 
-    if (command == "PUT" || command == "SET")
+    if (command == "PUT" || command == "SET" || command == "REPL_PUT" || command == "RAFT_PUT")
     {
-        if (args.size() != 3 || args[1].empty() || args[2].empty())
+        if (!((args.size() == 3) || (args.size() == 5 && upper(args[3]) == "EX")) ||
+            args[1].empty() || args[2].empty())
         {
-            return error_request("ERROR usage: SET <key> <value>", protocol);
+            return error_request("ERROR usage: SET <key> <value> [EX seconds]", protocol);
         }
         request.type = CommandType::Put;
+        if (command == "REPL_PUT")
+        {
+            request.type = CommandType::ReplicaPut;
+        }
+        if (command == "RAFT_PUT")
+        {
+            request.type = CommandType::RaftPut;
+        }
         request.key = args[1];
         request.value = args[2];
+        if (args.size() == 5)
+        {
+            long ttl = 0;
+            if (!parse_long(args[4], ttl) || ttl <= 0)
+            {
+                return error_request("ERROR invalid_ttl", protocol);
+            }
+            request.ttl_seconds = static_cast<int>(ttl);
+        }
         return request;
     }
 
@@ -116,13 +134,32 @@ Request parse_args(const std::vector<std::string> &args, ProtocolType protocol)
         return request;
     }
 
-    if (command == "DEL")
+    if (command == "REPL_GET")
+    {
+        if (args.size() != 2 || args[1].empty())
+        {
+            return error_request("ERROR usage: REPL_GET <key>", protocol);
+        }
+        request.type = CommandType::ReplicaGet;
+        request.key = args[1];
+        return request;
+    }
+
+    if (command == "DEL" || command == "REPL_DEL" || command == "RAFT_DEL")
     {
         if (args.size() != 2 || args[1].empty())
         {
             return error_request("ERROR usage: DEL <key>", protocol);
         }
         request.type = CommandType::Del;
+        if (command == "REPL_DEL")
+        {
+            request.type = CommandType::ReplicaDel;
+        }
+        if (command == "RAFT_DEL")
+        {
+            request.type = CommandType::RaftDel;
+        }
         request.key = args[1];
         return request;
     }
@@ -134,6 +171,42 @@ Request parse_args(const std::vector<std::string> &args, ProtocolType protocol)
             return error_request("ERROR usage: EXISTS <key>", protocol);
         }
         request.type = CommandType::Exists;
+        request.key = args[1];
+        return request;
+    }
+
+    if (command == "EXPIRE" || command == "REPL_EXPIRE" || command == "RAFT_EXPIRE")
+    {
+        if (args.size() != 3 || args[1].empty())
+        {
+            return error_request("ERROR usage: EXPIRE <key> <seconds>", protocol);
+        }
+        long ttl = 0;
+        if (!parse_long(args[2], ttl) || ttl <= 0)
+        {
+            return error_request("ERROR invalid_ttl", protocol);
+        }
+        request.type = CommandType::Expire;
+        if (command == "REPL_EXPIRE")
+        {
+            request.type = CommandType::ReplicaExpire;
+        }
+        if (command == "RAFT_EXPIRE")
+        {
+            request.type = CommandType::RaftExpire;
+        }
+        request.key = args[1];
+        request.ttl_seconds = static_cast<int>(ttl);
+        return request;
+    }
+
+    if (command == "TTL")
+    {
+        if (args.size() != 2 || args[1].empty())
+        {
+            return error_request("ERROR usage: TTL <key>", protocol);
+        }
+        request.type = CommandType::Ttl;
         request.key = args[1];
         return request;
     }
@@ -208,7 +281,7 @@ Request KVProtocol::parse_request(const std::string &line)
     input >> command;
     command = upper(command);
 
-    if (command == "PUT" || command == "SET")
+    if (command == "PUT" || command == "REPL_PUT" || command == "RAFT_PUT")
     {
         std::string key;
         std::string value;

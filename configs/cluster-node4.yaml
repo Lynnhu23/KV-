@@ -11,10 +11,15 @@ store:
   wal_file: "./data/node-4/kv.wal"
   snapshot_file: "./data/node-4/kv.snapshot"
   snapshot_threshold: 1000
+  max_keys: 0
 
 cluster:
   enabled: true
   peers: "node-1@127.0.0.1:19021,node-2@127.0.0.1:19022,node-3@127.0.0.1:19023,node-4@127.0.0.1:19024,node-5@127.0.0.1:19025"
+  replication_factor: 2
+  health_check_interval_ms: 1000
+  consistency: "raft"
+  leader_id: "node-1"
 
 log:
   write_mode: "async"

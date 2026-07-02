@@ -1,9 +1,7 @@
-PUT	user:1	alice
-PUT	user:1	alice
-PUT	user:1	alice
-PUT	user:1	alice
-PUT	user:1	alice
-PUT	user:1	alice
-PUT	user:1	alice
-PUT	user:1	alice
-PUT	user:1	alice
+PUT	dash:988	value:988	0
+PUT	dash:992	value:992	0
+PUT	dash:996	value:996	0
+PUT	dash:998	value:998	0
+PUT	dash:994	value:994	0
+PUT	partial:1	one	0
+PUT	replica:1	two	0

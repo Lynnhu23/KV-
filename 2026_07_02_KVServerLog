@@ -66,3 +66,62 @@
 2026-07-02 11:28:22.182892 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal snapshot=./data/node-1/kv.snapshot threshold=1000
 2026-07-02 11:28:22.183614 [info]: Worker thread pool started: threads=20
 2026-07-02 11:28:22.183658 [info]: KV node node-1 listening on 0.0.0.0:9006
+2026-07-02 11:57:47.710972 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal snapshot=./data/node-1/kv.snapshot threshold=1000 max_keys=0
+2026-07-02 11:57:47.712079 [info]: Worker thread pool started: threads=20
+2026-07-02 11:57:47.712133 [info]: KV node node-1 listening on 0.0.0.0:19007
+2026-07-02 12:08:28.134211 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal snapshot=./data/node-1/kv.snapshot threshold=1000 max_keys=0
+2026-07-02 12:08:28.134446 [info]: Cluster routing enabled
+2026-07-02 12:08:28.135210 [info]: Worker thread pool started: threads=20
+2026-07-02 12:08:28.135235 [erro]: bind failed on 0.0.0.0:19021: Address already in use
+2026-07-02 12:08:28.131337 [info]: KV store initialized: engine=memory wal=./data/node-3/kv.wal snapshot=./data/node-3/kv.snapshot threshold=1000 max_keys=0
+2026-07-02 12:08:28.131662 [info]: Cluster routing enabled
+2026-07-02 12:08:28.132721 [info]: Worker thread pool started: threads=20
+2026-07-02 12:08:28.132748 [info]: KV node node-3 listening on 0.0.0.0:19023
+2026-07-02 12:08:28.131477 [info]: KV store initialized: engine=memory wal=./data/node-5/kv.wal snapshot=./data/node-5/kv.snapshot threshold=1000 max_keys=0
+2026-07-02 12:08:28.131703 [info]: Cluster routing enabled
+2026-07-02 12:08:28.132722 [info]: Worker thread pool started: threads=20
+2026-07-02 12:08:28.132747 [info]: KV node node-5 listening on 0.0.0.0:19025
+2026-07-02 12:08:28.131161 [info]: KV store initialized: engine=memory wal=./data/node-4/kv.wal snapshot=./data/node-4/kv.snapshot threshold=1000 max_keys=0
+2026-07-02 12:08:28.131407 [info]: Cluster routing enabled
+2026-07-02 12:08:28.132068 [info]: Worker thread pool started: threads=20
+2026-07-02 12:08:28.132102 [info]: KV node node-4 listening on 0.0.0.0:19024
+2026-07-02 12:08:28.131283 [info]: KV store initialized: engine=memory wal=./data/node-2/kv.wal snapshot=./data/node-2/kv.snapshot threshold=1000 max_keys=0
+2026-07-02 12:08:28.131524 [info]: Cluster routing enabled
+2026-07-02 12:08:28.132104 [info]: Worker thread pool started: threads=20
+2026-07-02 12:08:28.132131 [info]: KV node node-2 listening on 0.0.0.0:19022
+2026-07-02 12:18:58.676833 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal snapshot=./data/node-1/kv.snapshot threshold=1000 max_keys=0
+2026-07-02 12:18:58.677143 [info]: Cluster routing enabled
+2026-07-02 12:18:58.677828 [info]: Worker thread pool started: threads=20
+2026-07-02 12:18:58.677859 [erro]: bind failed on 0.0.0.0:19021: Address already in use
+2026-07-02 12:19:22.777818 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal snapshot=./data/node-1/kv.snapshot threshold=1000 max_keys=0
+2026-07-02 12:19:22.778118 [info]: Cluster routing enabled
+2026-07-02 12:19:22.778894 [info]: Worker thread pool started: threads=20
+2026-07-02 12:19:22.778933 [info]: KV node node-1 listening on 0.0.0.0:19121
+2026-07-02 12:19:34.180626 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal snapshot=./data/node-1/kv.snapshot threshold=1000 max_keys=0
+2026-07-02 12:19:34.181122 [info]: Cluster routing enabled
+2026-07-02 12:19:34.182180 [info]: Worker thread pool started: threads=20
+2026-07-02 12:19:34.182215 [info]: KV node node-1 listening on 0.0.0.0:19121
+2026-07-02 12:19:34.177188 [info]: KV store initialized: engine=memory wal=./data/node-2/kv.wal snapshot=./data/node-2/kv.snapshot threshold=1000 max_keys=0
+2026-07-02 12:19:34.177423 [info]: Cluster routing enabled
+2026-07-02 12:19:34.178116 [info]: Worker thread pool started: threads=20
+2026-07-02 12:19:34.178143 [info]: KV node node-2 listening on 0.0.0.0:19122
+2026-07-02 12:24:08.981883 [info]: KV store initialized: engine=memory wal=/tmp/tinykv-raft-test/data/node-2/kv.wal snapshot=/tmp/tinykv-raft-test/data/node-2/kv.snapshot threshold=1000 max_keys=0
+2026-07-02 12:24:08.982072 [info]: Cluster routing enabled
+2026-07-02 12:24:08.982773 [info]: Worker thread pool started: threads=20
+2026-07-02 12:24:08.982820 [info]: KV node node-2 listening on 0.0.0.0:19222
+2026-07-02 12:24:08.981767 [info]: KV store initialized: engine=memory wal=/tmp/tinykv-raft-test/data/node-1/kv.wal snapshot=/tmp/tinykv-raft-test/data/node-1/kv.snapshot threshold=1000 max_keys=0
+2026-07-02 12:24:08.981955 [info]: Cluster routing enabled
+2026-07-02 12:24:08.982644 [info]: Worker thread pool started: threads=20
+2026-07-02 12:24:08.982711 [info]: KV node node-1 listening on 0.0.0.0:19221
+2026-07-02 12:24:20.603547 [info]: KV store initialized: engine=memory wal=/tmp/tinykv-raft-test/data/node-1/kv.wal snapshot=/tmp/tinykv-raft-test/data/node-1/kv.snapshot threshold=1000 max_keys=0
+2026-07-02 12:24:20.603781 [info]: Cluster routing enabled
+2026-07-02 12:24:20.604842 [info]: Worker thread pool started: threads=20
+2026-07-02 12:24:20.604867 [info]: KV node node-1 listening on 0.0.0.0:19221
+2026-07-02 12:24:20.603730 [info]: KV store initialized: engine=memory wal=/tmp/tinykv-raft-test/data/node-3/kv.wal snapshot=/tmp/tinykv-raft-test/data/node-3/kv.snapshot threshold=1000 max_keys=0
+2026-07-02 12:24:20.603882 [info]: Cluster routing enabled
+2026-07-02 12:24:20.604552 [info]: Worker thread pool started: threads=20
+2026-07-02 12:24:20.604574 [info]: KV node node-3 listening on 0.0.0.0:19223
+2026-07-02 12:24:20.603458 [info]: KV store initialized: engine=memory wal=/tmp/tinykv-raft-test/data/node-2/kv.wal snapshot=/tmp/tinykv-raft-test/data/node-2/kv.snapshot threshold=1000 max_keys=0
+2026-07-02 12:24:20.603680 [info]: Cluster routing enabled
+2026-07-02 12:24:20.604360 [info]: Worker thread pool started: threads=20
+2026-07-02 12:24:20.604381 [info]: KV node node-2 listening on 0.0.0.0:19222

@@ -10,6 +10,15 @@ enum class CommandType
     Get,
     Del,
     Exists,
+    Expire,
+    Ttl,
+    ReplicaPut,
+    ReplicaGet,
+    ReplicaDel,
+    ReplicaExpire,
+    RaftPut,
+    RaftDel,
+    RaftExpire,
     Unknown
 };
 
@@ -25,6 +34,7 @@ struct Request
     ProtocolType protocol = ProtocolType::Text;
     std::string key;
     std::string value;
+    int ttl_seconds = 0;
     std::string error;
 };
 

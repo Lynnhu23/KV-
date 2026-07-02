@@ -230,6 +230,52 @@ std::string text_response(const std::string &value)
 {
     return KVProtocol::encode_response({value});
 }
+
+std::string strip_line_end(std::string value)
+{
+    while (!value.empty() && (value.back() == '\n' || value.back() == '\r'))
+    {
+        value.pop_back();
+    }
+    return value;
+}
+
+std::optional<std::string> parse_text_value(const std::string &response)
+{
+    const std::string prefix = "VALUE ";
+    if (response.rfind(prefix, 0) != 0)
+    {
+        return std::nullopt;
+    }
+    return strip_line_end(response.substr(prefix.size()));
+}
+
+bool response_ok(const std::string &response)
+{
+    return response == "OK\n" || response == "+OK\r\n";
+}
+
+bool is_client_write(CommandType type)
+{
+    return type == CommandType::Put ||
+           type == CommandType::Del ||
+           type == CommandType::Expire;
+}
+
+std::string raft_command_for(const Request &request)
+{
+    switch (request.type)
+    {
+    case CommandType::Put:
+        return "RAFT_PUT " + request.key + " " + request.value + "\n";
+    case CommandType::Del:
+        return "RAFT_DEL " + request.key + "\n";
+    case CommandType::Expire:
+        return "RAFT_EXPIRE " + request.key + " " + std::to_string(request.ttl_seconds) + "\n";
+    default:
+        return "";
+    }
+}
 }
 
 KVServer::KVServer()
@@ -300,17 +346,20 @@ bool KVServer::init_store()
                           store_cfg.wal_file.c_str(), store_cfg.snapshot_file.c_str());
                 return false;
             }
+            store->set_max_keys(static_cast<size_t>(store_cfg.max_keys));
 
             m_store = std::move(store);
-            LOG_INFO("KV store initialized: engine=%s wal=%s snapshot=%s threshold=%d",
+            LOG_INFO("KV store initialized: engine=%s wal=%s snapshot=%s threshold=%d max_keys=%d",
                      store_cfg.engine.c_str(),
                      store_cfg.wal_file.c_str(),
                      store_cfg.snapshot_file.c_str(),
-                     store_cfg.snapshot_threshold);
+                     store_cfg.snapshot_threshold,
+                     store_cfg.max_keys);
             return true;
         }
 
         m_store = std::make_unique<MemoryStore>();
+        m_store->set_max_keys(static_cast<size_t>(store_cfg.max_keys));
         LOG_INFO("KV store initialized: engine=%s", store_cfg.engine.c_str());
         return true;
     }
@@ -683,14 +732,57 @@ std::string KVServer::process_request_line(const std::string &line)
         return text_response(request.error);
     }
 
-    if (m_router.should_route(request) && !m_router.is_local_owner(request.key))
+    if (m_router.raft_enabled() && m_router.should_route(request) && !m_router.is_leader())
+    {
+        auto leader = m_router.leader_node();
+        if (!leader.has_value())
+        {
+            return request.protocol == ProtocolType::Resp
+                       ? resp_error("ERROR leader_unavailable")
+                       : text_response("ERROR leader_unavailable");
+        }
+        std::string response = m_router.forward(*leader, line);
+        if (request.protocol == ProtocolType::Resp && response.rfind("ERROR ", 0) == 0)
+        {
+            return resp_error(strip_line_end(response));
+        }
+        return response;
+    }
+
+    if (m_router.raft_enabled() && is_client_write(request.type) && m_router.is_leader())
+    {
+        int acks = 1;
+        std::string raft_command = raft_command_for(request);
+        for (const auto &follower : m_router.raft_followers())
+        {
+            if (response_ok(m_router.forward(follower, raft_command)))
+            {
+                ++acks;
+            }
+        }
+        if (acks < m_router.majority_size())
+        {
+            return request.protocol == ProtocolType::Resp
+                       ? resp_error("ERROR raft_no_quorum")
+                       : text_response("ERROR raft_no_quorum");
+        }
+    }
+
+    if (!m_router.raft_enabled() && m_router.should_route(request) && !m_router.is_local_owner(request.key))
     {
         auto owner = m_router.owner_for(request.key);
         if (!owner.has_value())
         {
-            return KVProtocol::encode_response({"ERROR route_unavailable"});
+            return request.protocol == ProtocolType::Resp
+                       ? resp_error("ERROR route_unavailable")
+                       : text_response("ERROR route_unavailable");
         }
-        return m_router.forward(*owner, line);
+        std::string response = m_router.forward(*owner, line);
+        if (request.protocol == ProtocolType::Resp && response.rfind("ERROR ", 0) == 0)
+        {
+            return resp_error(strip_line_end(response));
+        }
+        return response;
     }
 
     switch (request.type)
@@ -698,8 +790,24 @@ std::string KVServer::process_request_line(const std::string &line)
     case CommandType::Ping:
         return request.protocol == ProtocolType::Resp ? resp_simple("PONG") : text_response("PONG");
     case CommandType::Put:
+    case CommandType::ReplicaPut:
+    case CommandType::RaftPut:
     {
-        bool ok = m_store->put(request.key, request.value);
+        bool ok = request.ttl_seconds > 0
+                      ? m_store->put_ttl(request.key, request.value, request.ttl_seconds)
+                      : m_store->put(request.key, request.value);
+        if (ok && request.type == CommandType::Put && m_router.enabled() && !m_router.raft_enabled())
+        {
+            for (const auto &replica : m_router.replicas_for(request.key))
+            {
+                m_router.forward(replica, "REPL_PUT " + request.key + " " + request.value + "\n");
+                if (request.ttl_seconds > 0)
+                {
+                    m_router.forward(replica, "REPL_EXPIRE " + request.key + " " +
+                                                  std::to_string(request.ttl_seconds) + "\n");
+                }
+            }
+        }
         if (request.protocol == ProtocolType::Resp)
         {
             return ok ? resp_simple("OK") : resp_error("ERR put_failed");
@@ -707,8 +815,26 @@ std::string KVServer::process_request_line(const std::string &line)
         return text_response(ok ? "OK" : "ERROR put_failed");
     }
     case CommandType::Get:
+    case CommandType::ReplicaGet:
     {
         auto value = m_store->get(request.key);
+        if (!value.has_value() && request.type == CommandType::Get && m_router.enabled())
+        {
+            for (const auto &node : m_router.alive_nodes())
+            {
+                auto owner = m_router.owner_for(request.key);
+                if (owner.has_value() && node.id == owner->id)
+                {
+                    continue;
+                }
+                std::string replica_response = m_router.forward(node, "REPL_GET " + request.key + "\n");
+                value = parse_text_value(replica_response);
+                if (value.has_value())
+                {
+                    break;
+                }
+            }
+        }
         if (request.protocol == ProtocolType::Resp)
         {
             return resp_bulk(value);
@@ -720,8 +846,17 @@ std::string KVServer::process_request_line(const std::string &line)
         return text_response("VALUE " + *value);
     }
     case CommandType::Del:
+    case CommandType::ReplicaDel:
+    case CommandType::RaftDel:
     {
         bool removed = m_store->del(request.key);
+        if (request.type == CommandType::Del && m_router.enabled() && !m_router.raft_enabled())
+        {
+            for (const auto &replica : m_router.replicas_for(request.key))
+            {
+                m_router.forward(replica, "REPL_DEL " + request.key + "\n");
+            }
+        }
         return request.protocol == ProtocolType::Resp
                    ? resp_integer(removed ? 1 : 0)
                    : text_response(removed ? "OK" : "NOT_FOUND");
@@ -732,6 +867,30 @@ std::string KVServer::process_request_line(const std::string &line)
         return request.protocol == ProtocolType::Resp
                    ? resp_integer(exists ? 1 : 0)
                    : text_response(exists ? "TRUE" : "FALSE");
+    }
+    case CommandType::Expire:
+    case CommandType::ReplicaExpire:
+    case CommandType::RaftExpire:
+    {
+        bool updated = m_store->expire(request.key, request.ttl_seconds);
+        if (updated && request.type == CommandType::Expire && m_router.enabled() && !m_router.raft_enabled())
+        {
+            for (const auto &replica : m_router.replicas_for(request.key))
+            {
+                m_router.forward(replica, "REPL_EXPIRE " + request.key + " " +
+                                              std::to_string(request.ttl_seconds) + "\n");
+            }
+        }
+        return request.protocol == ProtocolType::Resp
+                   ? resp_integer(updated ? 1 : 0)
+                   : text_response(updated ? "OK" : "NOT_FOUND");
+    }
+    case CommandType::Ttl:
+    {
+        long long ttl = m_store->ttl(request.key);
+        return request.protocol == ProtocolType::Resp
+                   ? resp_integer(ttl)
+                   : text_response("TTL " + std::to_string(ttl));
     }
     case CommandType::Unknown:
         break;

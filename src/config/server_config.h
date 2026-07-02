@@ -29,12 +29,17 @@ struct ServerConfig
         std::string wal_file = "./data/node-1/kv.wal";
         std::string snapshot_file = "./data/node-1/kv.snapshot";
         int snapshot_threshold = 1000;
+        int max_keys = 0;
     } store;
 
     struct Cluster
     {
         bool enabled = false;
         std::vector<ClusterPeerConfig> peers;
+        int replication_factor = 2;
+        int health_check_interval_ms = 1000;
+        std::string consistency = "best_effort";
+        std::string leader_id = "node-1";
     } cluster;
 
     struct LogConfig

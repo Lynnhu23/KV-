@@ -4,7 +4,7 @@
 #include "kv_store.h"
 
 #include <string>
-#include <unordered_map>
+#include <vector>
 
 class SnapshotFile
 {
@@ -13,7 +13,7 @@ public:
 
     void set_path(std::string path);
     const std::string &path() const;
-    bool save(const std::unordered_map<std::string, std::string> &data) const;
+    bool save(const std::vector<StoreEntry> &entries) const;
     bool load(KVStore &store) const;
 
 private:

@@ -1,0 +1,9 @@
+bench
+kvserver
+server
+data/
+tests/build/
+*_KVServerLog
+*_ServerLog
+*.o
+*.out

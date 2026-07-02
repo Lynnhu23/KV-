@@ -1,7 +1,7 @@
-Start testing: Jul 02 11:21 CST
+Start testing: Jul 02 12:24 CST
 ----------------------------------------------------------
-1/21 Testing: KVServerIntegrationTest.Ping
-1/21 Test: KVServerIntegrationTest.Ping
+1/25 Testing: KVServerIntegrationTest.Ping
+1/25 Test: KVServerIntegrationTest.Ping
 Command: ""
 Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
 "KVServerIntegrationTest.Ping" start time: 
@@ -11,12 +11,12 @@ Output:
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"KVServerIntegrationTest.Ping" end time: Jul 02 11:21 CST
+"KVServerIntegrationTest.Ping" end time: Jul 02 12:24 CST
 "KVServerIntegrationTest.Ping" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-2/21 Testing: KVServerIntegrationTest.PutGet
-2/21 Test: KVServerIntegrationTest.PutGet
+2/25 Testing: KVServerIntegrationTest.PutGet
+2/25 Test: KVServerIntegrationTest.PutGet
 Command: ""
 Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
 "KVServerIntegrationTest.PutGet" start time: 
@@ -26,12 +26,12 @@ Output:
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"KVServerIntegrationTest.PutGet" end time: Jul 02 11:21 CST
+"KVServerIntegrationTest.PutGet" end time: Jul 02 12:24 CST
 "KVServerIntegrationTest.PutGet" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-3/21 Testing: KVServerIntegrationTest.Delete
-3/21 Test: KVServerIntegrationTest.Delete
+3/25 Testing: KVServerIntegrationTest.Delete
+3/25 Test: KVServerIntegrationTest.Delete
 Command: ""
 Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
 "KVServerIntegrationTest.Delete" start time: 
@@ -41,15 +41,15 @@ Output:
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"KVServerIntegrationTest.Delete" end time: Jul 02 11:21 CST
+"KVServerIntegrationTest.Delete" end time: Jul 02 12:24 CST
 "KVServerIntegrationTest.Delete" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-4/21 Testing: BlockQueueTest.PushPop
-4/21 Test: BlockQueueTest.PushPop
+4/25 Testing: BlockQueueTest.PushPop
+4/25 Test: BlockQueueTest.PushPop
 Command: "/home/huzeyi/xiangmu/TinyWebServer/tests/build/tinykv_tests" "--gtest_filter=BlockQueueTest.PushPop" "--gtest_also_run_disabled_tests"
 Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
-"BlockQueueTest.PushPop" start time: Jul 02 11:21 CST
+"BlockQueueTest.PushPop" start time: Jul 02 12:24 CST
 Output:
 ----------------------------------------------------------
 Running main() from /home/huzeyi/xiangmu/TinyWebServer/tests/build/_deps/googletest-src/googletest/src/gtest_main.cc
@@ -68,15 +68,15 @@ Note: Google Test filter = BlockQueueTest.PushPop
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"BlockQueueTest.PushPop" end time: Jul 02 11:21 CST
+"BlockQueueTest.PushPop" end time: Jul 02 12:24 CST
 "BlockQueueTest.PushPop" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-5/21 Testing: BlockQueueTest.FullQueue
-5/21 Test: BlockQueueTest.FullQueue
+5/25 Testing: BlockQueueTest.FullQueue
+5/25 Test: BlockQueueTest.FullQueue
 Command: "/home/huzeyi/xiangmu/TinyWebServer/tests/build/tinykv_tests" "--gtest_filter=BlockQueueTest.FullQueue" "--gtest_also_run_disabled_tests"
 Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
-"BlockQueueTest.FullQueue" start time: Jul 02 11:21 CST
+"BlockQueueTest.FullQueue" start time: Jul 02 12:24 CST
 Output:
 ----------------------------------------------------------
 Running main() from /home/huzeyi/xiangmu/TinyWebServer/tests/build/_deps/googletest-src/googletest/src/gtest_main.cc
@@ -95,15 +95,15 @@ Note: Google Test filter = BlockQueueTest.FullQueue
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"BlockQueueTest.FullQueue" end time: Jul 02 11:21 CST
+"BlockQueueTest.FullQueue" end time: Jul 02 12:24 CST
 "BlockQueueTest.FullQueue" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-6/21 Testing: BlockQueueTest.FrontBack
-6/21 Test: BlockQueueTest.FrontBack
+6/25 Testing: BlockQueueTest.FrontBack
+6/25 Test: BlockQueueTest.FrontBack
 Command: "/home/huzeyi/xiangmu/TinyWebServer/tests/build/tinykv_tests" "--gtest_filter=BlockQueueTest.FrontBack" "--gtest_also_run_disabled_tests"
 Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
-"BlockQueueTest.FrontBack" start time: Jul 02 11:21 CST
+"BlockQueueTest.FrontBack" start time: Jul 02 12:24 CST
 Output:
 ----------------------------------------------------------
 Running main() from /home/huzeyi/xiangmu/TinyWebServer/tests/build/_deps/googletest-src/googletest/src/gtest_main.cc
@@ -122,15 +122,15 @@ Note: Google Test filter = BlockQueueTest.FrontBack
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"BlockQueueTest.FrontBack" end time: Jul 02 11:21 CST
+"BlockQueueTest.FrontBack" end time: Jul 02 12:24 CST
 "BlockQueueTest.FrontBack" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-7/21 Testing: BlockQueueTest.Clear
-7/21 Test: BlockQueueTest.Clear
+7/25 Testing: BlockQueueTest.Clear
+7/25 Test: BlockQueueTest.Clear
 Command: "/home/huzeyi/xiangmu/TinyWebServer/tests/build/tinykv_tests" "--gtest_filter=BlockQueueTest.Clear" "--gtest_also_run_disabled_tests"
 Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
-"BlockQueueTest.Clear" start time: Jul 02 11:21 CST
+"BlockQueueTest.Clear" start time: Jul 02 12:24 CST
 Output:
 ----------------------------------------------------------
 Running main() from /home/huzeyi/xiangmu/TinyWebServer/tests/build/_deps/googletest-src/googletest/src/gtest_main.cc
@@ -149,15 +149,15 @@ Note: Google Test filter = BlockQueueTest.Clear
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"BlockQueueTest.Clear" end time: Jul 02 11:21 CST
+"BlockQueueTest.Clear" end time: Jul 02 12:24 CST
 "BlockQueueTest.Clear" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-8/21 Testing: BlockQueueTest.ThreadSafety
-8/21 Test: BlockQueueTest.ThreadSafety
+8/25 Testing: BlockQueueTest.ThreadSafety
+8/25 Test: BlockQueueTest.ThreadSafety
 Command: "/home/huzeyi/xiangmu/TinyWebServer/tests/build/tinykv_tests" "--gtest_filter=BlockQueueTest.ThreadSafety" "--gtest_also_run_disabled_tests"
 Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
-"BlockQueueTest.ThreadSafety" start time: Jul 02 11:21 CST
+"BlockQueueTest.ThreadSafety" start time: Jul 02 12:24 CST
 Output:
 ----------------------------------------------------------
 Running main() from /home/huzeyi/xiangmu/TinyWebServer/tests/build/_deps/googletest-src/googletest/src/gtest_main.cc
@@ -176,15 +176,15 @@ Note: Google Test filter = BlockQueueTest.ThreadSafety
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"BlockQueueTest.ThreadSafety" end time: Jul 02 11:21 CST
+"BlockQueueTest.ThreadSafety" end time: Jul 02 12:24 CST
 "BlockQueueTest.ThreadSafety" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-9/21 Testing: BlockQueueTest.TimeoutPop
-9/21 Test: BlockQueueTest.TimeoutPop
+9/25 Testing: BlockQueueTest.TimeoutPop
+9/25 Test: BlockQueueTest.TimeoutPop
 Command: "/home/huzeyi/xiangmu/TinyWebServer/tests/build/tinykv_tests" "--gtest_filter=BlockQueueTest.TimeoutPop" "--gtest_also_run_disabled_tests"
 Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
-"BlockQueueTest.TimeoutPop" start time: Jul 02 11:21 CST
+"BlockQueueTest.TimeoutPop" start time: Jul 02 12:24 CST
 Output:
 ----------------------------------------------------------
 Running main() from /home/huzeyi/xiangmu/TinyWebServer/tests/build/_deps/googletest-src/googletest/src/gtest_main.cc
@@ -193,25 +193,25 @@ Note: Google Test filter = BlockQueueTest.TimeoutPop
 [----------] Global test environment set-up.
 [----------] 1 test from BlockQueueTest
 [ RUN      ] BlockQueueTest.TimeoutPop
-[       OK ] BlockQueueTest.TimeoutPop (103 ms)
-[----------] 1 test from BlockQueueTest (103 ms total)
+[       OK ] BlockQueueTest.TimeoutPop (102 ms)
+[----------] 1 test from BlockQueueTest (102 ms total)
 
 [----------] Global test environment tear-down
-[==========] 1 test from 1 test suite ran. (103 ms total)
+[==========] 1 test from 1 test suite ran. (102 ms total)
 [  PASSED  ] 1 test.
 <end of output>
-Test time =   0.11 sec
+Test time =   0.10 sec
 ----------------------------------------------------------
 Test Passed.
-"BlockQueueTest.TimeoutPop" end time: Jul 02 11:21 CST
+"BlockQueueTest.TimeoutPop" end time: Jul 02 12:24 CST
 "BlockQueueTest.TimeoutPop" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-10/21 Testing: ConsistentHashTest.ReturnsStableOwnerForKey
-10/21 Test: ConsistentHashTest.ReturnsStableOwnerForKey
+10/25 Testing: ConsistentHashTest.ReturnsStableOwnerForKey
+10/25 Test: ConsistentHashTest.ReturnsStableOwnerForKey
 Command: "/home/huzeyi/xiangmu/TinyWebServer/tests/build/tinykv_tests" "--gtest_filter=ConsistentHashTest.ReturnsStableOwnerForKey" "--gtest_also_run_disabled_tests"
 Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
-"ConsistentHashTest.ReturnsStableOwnerForKey" start time: Jul 02 11:21 CST
+"ConsistentHashTest.ReturnsStableOwnerForKey" start time: Jul 02 12:24 CST
 Output:
 ----------------------------------------------------------
 Running main() from /home/huzeyi/xiangmu/TinyWebServer/tests/build/_deps/googletest-src/googletest/src/gtest_main.cc
@@ -230,15 +230,15 @@ Note: Google Test filter = ConsistentHashTest.ReturnsStableOwnerForKey
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"ConsistentHashTest.ReturnsStableOwnerForKey" end time: Jul 02 11:21 CST
+"ConsistentHashTest.ReturnsStableOwnerForKey" end time: Jul 02 12:24 CST
 "ConsistentHashTest.ReturnsStableOwnerForKey" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-11/21 Testing: ConsistentHashTest.EmptyRingHasNoOwner
-11/21 Test: ConsistentHashTest.EmptyRingHasNoOwner
+11/25 Testing: ConsistentHashTest.EmptyRingHasNoOwner
+11/25 Test: ConsistentHashTest.EmptyRingHasNoOwner
 Command: "/home/huzeyi/xiangmu/TinyWebServer/tests/build/tinykv_tests" "--gtest_filter=ConsistentHashTest.EmptyRingHasNoOwner" "--gtest_also_run_disabled_tests"
 Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
-"ConsistentHashTest.EmptyRingHasNoOwner" start time: Jul 02 11:21 CST
+"ConsistentHashTest.EmptyRingHasNoOwner" start time: Jul 02 12:24 CST
 Output:
 ----------------------------------------------------------
 Running main() from /home/huzeyi/xiangmu/TinyWebServer/tests/build/_deps/googletest-src/googletest/src/gtest_main.cc
@@ -257,15 +257,15 @@ Note: Google Test filter = ConsistentHashTest.EmptyRingHasNoOwner
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"ConsistentHashTest.EmptyRingHasNoOwner" end time: Jul 02 11:21 CST
+"ConsistentHashTest.EmptyRingHasNoOwner" end time: Jul 02 12:24 CST
 "ConsistentHashTest.EmptyRingHasNoOwner" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-12/21 Testing: KVProtocolTest.ParsePutWithSpaces
-12/21 Test: KVProtocolTest.ParsePutWithSpaces
+12/25 Testing: KVProtocolTest.ParsePutWithSpaces
+12/25 Test: KVProtocolTest.ParsePutWithSpaces
 Command: "/home/huzeyi/xiangmu/TinyWebServer/tests/build/tinykv_tests" "--gtest_filter=KVProtocolTest.ParsePutWithSpaces" "--gtest_also_run_disabled_tests"
 Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
-"KVProtocolTest.ParsePutWithSpaces" start time: Jul 02 11:21 CST
+"KVProtocolTest.ParsePutWithSpaces" start time: Jul 02 12:24 CST
 Output:
 ----------------------------------------------------------
 Running main() from /home/huzeyi/xiangmu/TinyWebServer/tests/build/_deps/googletest-src/googletest/src/gtest_main.cc
@@ -284,15 +284,15 @@ Note: Google Test filter = KVProtocolTest.ParsePutWithSpaces
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"KVProtocolTest.ParsePutWithSpaces" end time: Jul 02 11:21 CST
+"KVProtocolTest.ParsePutWithSpaces" end time: Jul 02 12:24 CST
 "KVProtocolTest.ParsePutWithSpaces" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-13/21 Testing: KVProtocolTest.ParseGetAndExists
-13/21 Test: KVProtocolTest.ParseGetAndExists
+13/25 Testing: KVProtocolTest.ParseGetAndExists
+13/25 Test: KVProtocolTest.ParseGetAndExists
 Command: "/home/huzeyi/xiangmu/TinyWebServer/tests/build/tinykv_tests" "--gtest_filter=KVProtocolTest.ParseGetAndExists" "--gtest_also_run_disabled_tests"
 Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
-"KVProtocolTest.ParseGetAndExists" start time: Jul 02 11:21 CST
+"KVProtocolTest.ParseGetAndExists" start time: Jul 02 12:24 CST
 Output:
 ----------------------------------------------------------
 Running main() from /home/huzeyi/xiangmu/TinyWebServer/tests/build/_deps/googletest-src/googletest/src/gtest_main.cc
@@ -311,15 +311,15 @@ Note: Google Test filter = KVProtocolTest.ParseGetAndExists
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"KVProtocolTest.ParseGetAndExists" end time: Jul 02 11:21 CST
+"KVProtocolTest.ParseGetAndExists" end time: Jul 02 12:24 CST
 "KVProtocolTest.ParseGetAndExists" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-14/21 Testing: KVProtocolTest.RejectBadCommands
-14/21 Test: KVProtocolTest.RejectBadCommands
+14/25 Testing: KVProtocolTest.RejectBadCommands
+14/25 Test: KVProtocolTest.RejectBadCommands
 Command: "/home/huzeyi/xiangmu/TinyWebServer/tests/build/tinykv_tests" "--gtest_filter=KVProtocolTest.RejectBadCommands" "--gtest_also_run_disabled_tests"
 Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
-"KVProtocolTest.RejectBadCommands" start time: Jul 02 11:21 CST
+"KVProtocolTest.RejectBadCommands" start time: Jul 02 12:24 CST
 Output:
 ----------------------------------------------------------
 Running main() from /home/huzeyi/xiangmu/TinyWebServer/tests/build/_deps/googletest-src/googletest/src/gtest_main.cc
@@ -338,15 +338,15 @@ Note: Google Test filter = KVProtocolTest.RejectBadCommands
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"KVProtocolTest.RejectBadCommands" end time: Jul 02 11:21 CST
+"KVProtocolTest.RejectBadCommands" end time: Jul 02 12:24 CST
 "KVProtocolTest.RejectBadCommands" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-15/21 Testing: KVProtocolTest.EncodeResponse
-15/21 Test: KVProtocolTest.EncodeResponse
+15/25 Testing: KVProtocolTest.EncodeResponse
+15/25 Test: KVProtocolTest.EncodeResponse
 Command: "/home/huzeyi/xiangmu/TinyWebServer/tests/build/tinykv_tests" "--gtest_filter=KVProtocolTest.EncodeResponse" "--gtest_also_run_disabled_tests"
 Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
-"KVProtocolTest.EncodeResponse" start time: Jul 02 11:21 CST
+"KVProtocolTest.EncodeResponse" start time: Jul 02 12:24 CST
 Output:
 ----------------------------------------------------------
 Running main() from /home/huzeyi/xiangmu/TinyWebServer/tests/build/_deps/googletest-src/googletest/src/gtest_main.cc
@@ -365,15 +365,15 @@ Note: Google Test filter = KVProtocolTest.EncodeResponse
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"KVProtocolTest.EncodeResponse" end time: Jul 02 11:21 CST
+"KVProtocolTest.EncodeResponse" end time: Jul 02 12:24 CST
 "KVProtocolTest.EncodeResponse" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-16/21 Testing: KVProtocolTest.ParseRespSetGetExists
-16/21 Test: KVProtocolTest.ParseRespSetGetExists
+16/25 Testing: KVProtocolTest.ParseRespSetGetExists
+16/25 Test: KVProtocolTest.ParseRespSetGetExists
 Command: "/home/huzeyi/xiangmu/TinyWebServer/tests/build/tinykv_tests" "--gtest_filter=KVProtocolTest.ParseRespSetGetExists" "--gtest_also_run_disabled_tests"
 Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
-"KVProtocolTest.ParseRespSetGetExists" start time: Jul 02 11:21 CST
+"KVProtocolTest.ParseRespSetGetExists" start time: Jul 02 12:24 CST
 Output:
 ----------------------------------------------------------
 Running main() from /home/huzeyi/xiangmu/TinyWebServer/tests/build/_deps/googletest-src/googletest/src/gtest_main.cc
@@ -392,15 +392,42 @@ Note: Google Test filter = KVProtocolTest.ParseRespSetGetExists
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"KVProtocolTest.ParseRespSetGetExists" end time: Jul 02 11:21 CST
+"KVProtocolTest.ParseRespSetGetExists" end time: Jul 02 12:24 CST
 "KVProtocolTest.ParseRespSetGetExists" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-17/21 Testing: KVProtocolTest.RejectBadResp
-17/21 Test: KVProtocolTest.RejectBadResp
+17/25 Testing: KVProtocolTest.ParseRespSetWithExpireAndTtl
+17/25 Test: KVProtocolTest.ParseRespSetWithExpireAndTtl
+Command: "/home/huzeyi/xiangmu/TinyWebServer/tests/build/tinykv_tests" "--gtest_filter=KVProtocolTest.ParseRespSetWithExpireAndTtl" "--gtest_also_run_disabled_tests"
+Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
+"KVProtocolTest.ParseRespSetWithExpireAndTtl" start time: Jul 02 12:24 CST
+Output:
+----------------------------------------------------------
+Running main() from /home/huzeyi/xiangmu/TinyWebServer/tests/build/_deps/googletest-src/googletest/src/gtest_main.cc
+Note: Google Test filter = KVProtocolTest.ParseRespSetWithExpireAndTtl
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from KVProtocolTest
+[ RUN      ] KVProtocolTest.ParseRespSetWithExpireAndTtl
+[       OK ] KVProtocolTest.ParseRespSetWithExpireAndTtl (0 ms)
+[----------] 1 test from KVProtocolTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (0 ms total)
+[  PASSED  ] 1 test.
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"KVProtocolTest.ParseRespSetWithExpireAndTtl" end time: Jul 02 12:24 CST
+"KVProtocolTest.ParseRespSetWithExpireAndTtl" time elapsed: 00:00:00
+----------------------------------------------------------
+
+18/25 Testing: KVProtocolTest.RejectBadResp
+18/25 Test: KVProtocolTest.RejectBadResp
 Command: "/home/huzeyi/xiangmu/TinyWebServer/tests/build/tinykv_tests" "--gtest_filter=KVProtocolTest.RejectBadResp" "--gtest_also_run_disabled_tests"
 Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
-"KVProtocolTest.RejectBadResp" start time: Jul 02 11:21 CST
+"KVProtocolTest.RejectBadResp" start time: Jul 02 12:24 CST
 Output:
 ----------------------------------------------------------
 Running main() from /home/huzeyi/xiangmu/TinyWebServer/tests/build/_deps/googletest-src/googletest/src/gtest_main.cc
@@ -419,15 +446,15 @@ Note: Google Test filter = KVProtocolTest.RejectBadResp
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"KVProtocolTest.RejectBadResp" end time: Jul 02 11:21 CST
+"KVProtocolTest.RejectBadResp" end time: Jul 02 12:24 CST
 "KVProtocolTest.RejectBadResp" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-18/21 Testing: MemoryStoreTest.PutGetExistsAndDelete
-18/21 Test: MemoryStoreTest.PutGetExistsAndDelete
+19/25 Testing: MemoryStoreTest.PutGetExistsAndDelete
+19/25 Test: MemoryStoreTest.PutGetExistsAndDelete
 Command: "/home/huzeyi/xiangmu/TinyWebServer/tests/build/tinykv_tests" "--gtest_filter=MemoryStoreTest.PutGetExistsAndDelete" "--gtest_also_run_disabled_tests"
 Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
-"MemoryStoreTest.PutGetExistsAndDelete" start time: Jul 02 11:21 CST
+"MemoryStoreTest.PutGetExistsAndDelete" start time: Jul 02 12:24 CST
 Output:
 ----------------------------------------------------------
 Running main() from /home/huzeyi/xiangmu/TinyWebServer/tests/build/_deps/googletest-src/googletest/src/gtest_main.cc
@@ -446,15 +473,15 @@ Note: Google Test filter = MemoryStoreTest.PutGetExistsAndDelete
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"MemoryStoreTest.PutGetExistsAndDelete" end time: Jul 02 11:21 CST
+"MemoryStoreTest.PutGetExistsAndDelete" end time: Jul 02 12:24 CST
 "MemoryStoreTest.PutGetExistsAndDelete" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-19/21 Testing: MemoryStoreTest.RejectsEmptyKey
-19/21 Test: MemoryStoreTest.RejectsEmptyKey
+20/25 Testing: MemoryStoreTest.RejectsEmptyKey
+20/25 Test: MemoryStoreTest.RejectsEmptyKey
 Command: "/home/huzeyi/xiangmu/TinyWebServer/tests/build/tinykv_tests" "--gtest_filter=MemoryStoreTest.RejectsEmptyKey" "--gtest_also_run_disabled_tests"
 Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
-"MemoryStoreTest.RejectsEmptyKey" start time: Jul 02 11:21 CST
+"MemoryStoreTest.RejectsEmptyKey" start time: Jul 02 12:24 CST
 Output:
 ----------------------------------------------------------
 Running main() from /home/huzeyi/xiangmu/TinyWebServer/tests/build/_deps/googletest-src/googletest/src/gtest_main.cc
@@ -473,15 +500,69 @@ Note: Google Test filter = MemoryStoreTest.RejectsEmptyKey
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"MemoryStoreTest.RejectsEmptyKey" end time: Jul 02 11:21 CST
+"MemoryStoreTest.RejectsEmptyKey" end time: Jul 02 12:24 CST
 "MemoryStoreTest.RejectsEmptyKey" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-20/21 Testing: WALTest.ReplaysPutAndDelete
-20/21 Test: WALTest.ReplaysPutAndDelete
+21/25 Testing: MemoryStoreTest.ExpiresKeysWithTtl
+21/25 Test: MemoryStoreTest.ExpiresKeysWithTtl
+Command: "/home/huzeyi/xiangmu/TinyWebServer/tests/build/tinykv_tests" "--gtest_filter=MemoryStoreTest.ExpiresKeysWithTtl" "--gtest_also_run_disabled_tests"
+Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
+"MemoryStoreTest.ExpiresKeysWithTtl" start time: Jul 02 12:24 CST
+Output:
+----------------------------------------------------------
+Running main() from /home/huzeyi/xiangmu/TinyWebServer/tests/build/_deps/googletest-src/googletest/src/gtest_main.cc
+Note: Google Test filter = MemoryStoreTest.ExpiresKeysWithTtl
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from MemoryStoreTest
+[ RUN      ] MemoryStoreTest.ExpiresKeysWithTtl
+[       OK ] MemoryStoreTest.ExpiresKeysWithTtl (1009 ms)
+[----------] 1 test from MemoryStoreTest (1009 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (1009 ms total)
+[  PASSED  ] 1 test.
+<end of output>
+Test time =   1.01 sec
+----------------------------------------------------------
+Test Passed.
+"MemoryStoreTest.ExpiresKeysWithTtl" end time: Jul 02 12:24 CST
+"MemoryStoreTest.ExpiresKeysWithTtl" time elapsed: 00:00:01
+----------------------------------------------------------
+
+22/25 Testing: MemoryStoreTest.EvictsLeastRecentlyUsedKey
+22/25 Test: MemoryStoreTest.EvictsLeastRecentlyUsedKey
+Command: "/home/huzeyi/xiangmu/TinyWebServer/tests/build/tinykv_tests" "--gtest_filter=MemoryStoreTest.EvictsLeastRecentlyUsedKey" "--gtest_also_run_disabled_tests"
+Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
+"MemoryStoreTest.EvictsLeastRecentlyUsedKey" start time: Jul 02 12:24 CST
+Output:
+----------------------------------------------------------
+Running main() from /home/huzeyi/xiangmu/TinyWebServer/tests/build/_deps/googletest-src/googletest/src/gtest_main.cc
+Note: Google Test filter = MemoryStoreTest.EvictsLeastRecentlyUsedKey
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from MemoryStoreTest
+[ RUN      ] MemoryStoreTest.EvictsLeastRecentlyUsedKey
+[       OK ] MemoryStoreTest.EvictsLeastRecentlyUsedKey (0 ms)
+[----------] 1 test from MemoryStoreTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (0 ms total)
+[  PASSED  ] 1 test.
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"MemoryStoreTest.EvictsLeastRecentlyUsedKey" end time: Jul 02 12:24 CST
+"MemoryStoreTest.EvictsLeastRecentlyUsedKey" time elapsed: 00:00:00
+----------------------------------------------------------
+
+23/25 Testing: WALTest.ReplaysPutAndDelete
+23/25 Test: WALTest.ReplaysPutAndDelete
 Command: "/home/huzeyi/xiangmu/TinyWebServer/tests/build/tinykv_tests" "--gtest_filter=WALTest.ReplaysPutAndDelete" "--gtest_also_run_disabled_tests"
 Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
-"WALTest.ReplaysPutAndDelete" start time: Jul 02 11:21 CST
+"WALTest.ReplaysPutAndDelete" start time: Jul 02 12:24 CST
 Output:
 ----------------------------------------------------------
 Running main() from /home/huzeyi/xiangmu/TinyWebServer/tests/build/_deps/googletest-src/googletest/src/gtest_main.cc
@@ -490,25 +571,25 @@ Note: Google Test filter = WALTest.ReplaysPutAndDelete
 [----------] Global test environment set-up.
 [----------] 1 test from WALTest
 [ RUN      ] WALTest.ReplaysPutAndDelete
-[       OK ] WALTest.ReplaysPutAndDelete (1 ms)
-[----------] 1 test from WALTest (1 ms total)
+[       OK ] WALTest.ReplaysPutAndDelete (0 ms)
+[----------] 1 test from WALTest (0 ms total)
 
 [----------] Global test environment tear-down
-[==========] 1 test from 1 test suite ran. (1 ms total)
+[==========] 1 test from 1 test suite ran. (0 ms total)
 [  PASSED  ] 1 test.
 <end of output>
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"WALTest.ReplaysPutAndDelete" end time: Jul 02 11:21 CST
+"WALTest.ReplaysPutAndDelete" end time: Jul 02 12:24 CST
 "WALTest.ReplaysPutAndDelete" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-21/21 Testing: WALTest.SnapshotCompactsWalAndRestoresState
-21/21 Test: WALTest.SnapshotCompactsWalAndRestoresState
+24/25 Testing: WALTest.SnapshotCompactsWalAndRestoresState
+24/25 Test: WALTest.SnapshotCompactsWalAndRestoresState
 Command: "/home/huzeyi/xiangmu/TinyWebServer/tests/build/tinykv_tests" "--gtest_filter=WALTest.SnapshotCompactsWalAndRestoresState" "--gtest_also_run_disabled_tests"
 Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
-"WALTest.SnapshotCompactsWalAndRestoresState" start time: Jul 02 11:21 CST
+"WALTest.SnapshotCompactsWalAndRestoresState" start time: Jul 02 12:24 CST
 Output:
 ----------------------------------------------------------
 Running main() from /home/huzeyi/xiangmu/TinyWebServer/tests/build/_deps/googletest-src/googletest/src/gtest_main.cc
@@ -517,18 +598,45 @@ Note: Google Test filter = WALTest.SnapshotCompactsWalAndRestoresState
 [----------] Global test environment set-up.
 [----------] 1 test from WALTest
 [ RUN      ] WALTest.SnapshotCompactsWalAndRestoresState
-[       OK ] WALTest.SnapshotCompactsWalAndRestoresState (1 ms)
-[----------] 1 test from WALTest (1 ms total)
+[       OK ] WALTest.SnapshotCompactsWalAndRestoresState (0 ms)
+[----------] 1 test from WALTest (0 ms total)
 
 [----------] Global test environment tear-down
-[==========] 1 test from 1 test suite ran. (1 ms total)
+[==========] 1 test from 1 test suite ran. (0 ms total)
 [  PASSED  ] 1 test.
 <end of output>
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"WALTest.SnapshotCompactsWalAndRestoresState" end time: Jul 02 11:21 CST
+"WALTest.SnapshotCompactsWalAndRestoresState" end time: Jul 02 12:24 CST
 "WALTest.SnapshotCompactsWalAndRestoresState" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-End testing: Jul 02 11:21 CST
+25/25 Testing: WALTest.RestoresTtlMetadata
+25/25 Test: WALTest.RestoresTtlMetadata
+Command: "/home/huzeyi/xiangmu/TinyWebServer/tests/build/tinykv_tests" "--gtest_filter=WALTest.RestoresTtlMetadata" "--gtest_also_run_disabled_tests"
+Directory: /home/huzeyi/xiangmu/TinyWebServer/tests/build
+"WALTest.RestoresTtlMetadata" start time: Jul 02 12:24 CST
+Output:
+----------------------------------------------------------
+Running main() from /home/huzeyi/xiangmu/TinyWebServer/tests/build/_deps/googletest-src/googletest/src/gtest_main.cc
+Note: Google Test filter = WALTest.RestoresTtlMetadata
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from WALTest
+[ RUN      ] WALTest.RestoresTtlMetadata
+[       OK ] WALTest.RestoresTtlMetadata (0 ms)
+[----------] 1 test from WALTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (0 ms total)
+[  PASSED  ] 1 test.
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"WALTest.RestoresTtlMetadata" end time: Jul 02 12:24 CST
+"WALTest.RestoresTtlMetadata" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Jul 02 12:24 CST

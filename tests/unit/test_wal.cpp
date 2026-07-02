@@ -69,3 +69,27 @@ TEST(WALTest, SnapshotCompactsWalAndRestoresState)
 
     fs::remove_all(dir);
 }
+
+TEST(WALTest, RestoresTtlMetadata)
+{
+    fs::path dir = fs::temp_directory_path() / "tinykv_ttl_wal_test";
+    fs::path wal_path = dir / "kv.wal";
+    fs::path snapshot_path = dir / "kv.snapshot";
+    fs::remove_all(dir);
+    fs::create_directories(dir);
+
+    {
+        PersistentMemoryStore store;
+        ASSERT_TRUE(store.init(wal_path.string(), snapshot_path.string(), 100));
+        EXPECT_TRUE(store.put_ttl("session", "alice", 30));
+    }
+
+    {
+        PersistentMemoryStore store;
+        ASSERT_TRUE(store.init(wal_path.string(), snapshot_path.string(), 100));
+        EXPECT_EQ(store.get("session"), "alice");
+        EXPECT_GT(store.ttl("session"), 0);
+    }
+
+    fs::remove_all(dir);
+}

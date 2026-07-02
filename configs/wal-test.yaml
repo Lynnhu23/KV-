@@ -11,6 +11,7 @@ store:
   wal_file: "./data/wal-test/kv.wal"
   snapshot_file: "./data/wal-test/kv.snapshot"
   snapshot_threshold: 1000
+  max_keys: 0
 
 log:
   write_mode: "async"

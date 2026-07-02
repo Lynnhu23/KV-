@@ -165,11 +165,16 @@ std::optional<ServerConfig> YamlConfigParser::load(const std::string &path)
                 else if (key == "wal_file") cfg.store.wal_file = value;
                 else if (key == "snapshot_file") cfg.store.snapshot_file = value;
                 else if (key == "snapshot_threshold") cfg.store.snapshot_threshold = std::stoi(value);
+                else if (key == "max_keys") cfg.store.max_keys = std::stoi(value);
             }
             else if (current_section == "cluster")
             {
                 if (key == "enabled") { bool b; if (parse_bool(value, b)) cfg.cluster.enabled = b; }
                 else if (key == "peers") cfg.cluster.peers = parse_peers(value);
+                else if (key == "replication_factor") cfg.cluster.replication_factor = std::stoi(value);
+                else if (key == "health_check_interval_ms") cfg.cluster.health_check_interval_ms = std::stoi(value);
+                else if (key == "consistency") cfg.cluster.consistency = value;
+                else if (key == "leader_id") cfg.cluster.leader_id = value;
             }
             else if (current_section == "log")
             {
@@ -211,10 +216,15 @@ store:
   wal_file: "./data/node-1/kv.wal"
   snapshot_file: "./data/node-1/kv.snapshot"
   snapshot_threshold: 1000
+  max_keys: 0
 
 cluster:
   enabled: false
   peers: "node-1@127.0.0.1:9006"
+  replication_factor: 2
+  health_check_interval_ms: 1000
+  consistency: "best_effort"
+  leader_id: "node-1"
 
 log:
   write_mode: "async"
@@ -240,7 +250,8 @@ std::string YamlConfigParser::to_yaml(const ServerConfig &cfg)
         << "  wal_enabled: " << (cfg.store.wal_enabled ? "true" : "false") << "\n"
         << "  wal_file: \"" << cfg.store.wal_file << "\"\n"
         << "  snapshot_file: \"" << cfg.store.snapshot_file << "\"\n"
-        << "  snapshot_threshold: " << cfg.store.snapshot_threshold << "\n\n"
+        << "  snapshot_threshold: " << cfg.store.snapshot_threshold << "\n"
+        << "  max_keys: " << cfg.store.max_keys << "\n\n"
         << "cluster:\n"
         << "  enabled: " << (cfg.cluster.enabled ? "true" : "false") << "\n"
         << "  peers: \"";
@@ -250,7 +261,11 @@ std::string YamlConfigParser::to_yaml(const ServerConfig &cfg)
         const auto &peer = cfg.cluster.peers[i];
         oss << peer.id << "@" << peer.host << ":" << peer.port;
     }
-    oss << "\"\n\n"
+    oss << "\"\n"
+        << "  replication_factor: " << cfg.cluster.replication_factor << "\n"
+        << "  health_check_interval_ms: " << cfg.cluster.health_check_interval_ms << "\n"
+        << "  consistency: \"" << cfg.cluster.consistency << "\"\n"
+        << "  leader_id: \"" << cfg.cluster.leader_id << "\"\n\n"
         << "log:\n"
         << "  write_mode: \"" << cfg.log.write_mode << "\"\n"
         << "  file: \"" << cfg.log.file << "\"\n"
@@ -289,9 +304,29 @@ bool ServerConfig::validate() const
         LOG_ERROR("Invalid snapshot threshold: %d", store.snapshot_threshold);
         return false;
     }
+    if (store.max_keys < 0)
+    {
+        LOG_ERROR("Invalid max keys: %d", store.max_keys);
+        return false;
+    }
     if (cluster.enabled && cluster.peers.empty())
     {
         LOG_ERROR("Cluster enabled but peers is empty");
+        return false;
+    }
+    if (cluster.replication_factor < 1)
+    {
+        LOG_ERROR("Invalid replication factor: %d", cluster.replication_factor);
+        return false;
+    }
+    if (cluster.health_check_interval_ms < 100)
+    {
+        LOG_ERROR("Invalid health check interval: %d", cluster.health_check_interval_ms);
+        return false;
+    }
+    if (cluster.consistency != "best_effort" && cluster.consistency != "raft")
+    {
+        LOG_ERROR("Invalid consistency mode: %s", cluster.consistency.c_str());
         return false;
     }
     for (const auto &peer : cluster.peers)

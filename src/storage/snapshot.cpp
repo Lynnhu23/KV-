@@ -45,7 +45,7 @@ const std::string &SnapshotFile::path() const
     return m_path;
 }
 
-bool SnapshotFile::save(const std::unordered_map<std::string, std::string> &data) const
+bool SnapshotFile::save(const std::vector<StoreEntry> &entries) const
 {
     if (m_path.empty())
     {
@@ -73,10 +73,12 @@ bool SnapshotFile::save(const std::unordered_map<std::string, std::string> &data
             return false;
         }
 
-        out << "TINYKV_SNAPSHOT_V1\n";
-        for (const auto &[key, value] : data)
+        out << "TINYKV_SNAPSHOT_V2\n";
+        for (const auto &entry : entries)
         {
-            out << escape(key) << '\t' << escape(value) << '\n';
+            out << escape(entry.key) << '\t'
+                << escape(entry.value) << '\t'
+                << entry.expire_at_ms << '\n';
         }
         out.flush();
         if (!out)
@@ -110,7 +112,13 @@ bool SnapshotFile::load(KVStore &store) const
     }
 
     std::string line;
-    if (!std::getline(in, line) || line != "TINYKV_SNAPSHOT_V1")
+    if (!std::getline(in, line))
+    {
+        return false;
+    }
+    bool v1 = line == "TINYKV_SNAPSHOT_V1";
+    bool v2 = line == "TINYKV_SNAPSHOT_V2";
+    if (!v1 && !v2)
     {
         return false;
     }
@@ -118,7 +126,7 @@ bool SnapshotFile::load(KVStore &store) const
     while (std::getline(in, line))
     {
         auto parts = split_tab(line);
-        if (parts.size() != 2)
+        if ((v1 && parts.size() != 2) || (v2 && parts.size() != 3))
         {
             return false;
         }
@@ -129,7 +137,8 @@ bool SnapshotFile::load(KVStore &store) const
         {
             return false;
         }
-        if (!store.put(key, value))
+        long long expire_at_ms = v2 ? std::stoll(parts[2]) : 0;
+        if (!store.put_with_expire_at(key, value, expire_at_ms))
         {
             return false;
         }

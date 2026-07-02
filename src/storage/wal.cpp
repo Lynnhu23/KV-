@@ -52,13 +52,31 @@ bool WriteAheadLog::open(const std::string &path)
 
 bool WriteAheadLog::append_put(const std::string &key, const std::string &value)
 {
+    return append_put(key, value, 0);
+}
+
+bool WriteAheadLog::append_put(const std::string &key, const std::string &value, long long expire_at_ms)
+{
     std::lock_guard<std::mutex> lock(m_mutex);
     if (!m_out.is_open())
     {
         return false;
     }
 
-    m_out << "PUT\t" << escape(key) << '\t' << escape(value) << '\n';
+    m_out << "PUT\t" << escape(key) << '\t' << escape(value) << '\t' << expire_at_ms << '\n';
+    m_out.flush();
+    return static_cast<bool>(m_out);
+}
+
+bool WriteAheadLog::append_expire(const std::string &key, long long expire_at_ms)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (!m_out.is_open())
+    {
+        return false;
+    }
+
+    m_out << "EXPIRE\t" << escape(key) << '\t' << expire_at_ms << '\n';
     m_out.flush();
     return static_cast<bool>(m_out);
 }
@@ -93,7 +111,7 @@ bool WriteAheadLog::replay(KVStore &store) const
             continue;
         }
 
-        if (parts[0] == "PUT" && parts.size() == 3)
+        if (parts[0] == "PUT" && (parts.size() == 3 || parts.size() == 4))
         {
             std::string key;
             std::string value;
@@ -101,10 +119,24 @@ bool WriteAheadLog::replay(KVStore &store) const
             {
                 return false;
             }
-            if (!store.put(key, value))
+            long long expire_at_ms = 0;
+            if (parts.size() == 4)
+            {
+                expire_at_ms = std::stoll(parts[3]);
+            }
+            if (!store.put_with_expire_at(key, value, expire_at_ms))
             {
                 return false;
             }
+        }
+        else if (parts[0] == "EXPIRE" && parts.size() == 3)
+        {
+            std::string key;
+            if (!unescape(parts[1], key))
+            {
+                return false;
+            }
+            store.expire_at(key, std::stoll(parts[2]));
         }
         else if (parts[0] == "DEL" && parts.size() == 2)
         {

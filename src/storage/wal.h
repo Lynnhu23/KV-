@@ -12,6 +12,8 @@ class WriteAheadLog
 public:
     bool open(const std::string &path);
     bool append_put(const std::string &key, const std::string &value);
+    bool append_put(const std::string &key, const std::string &value, long long expire_at_ms);
+    bool append_expire(const std::string &key, long long expire_at_ms);
     bool append_del(const std::string &key);
     bool replay(KVStore &store) const;
     bool reset();

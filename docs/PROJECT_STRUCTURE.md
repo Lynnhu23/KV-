@@ -10,7 +10,8 @@ src/
   config/                  Runtime config schema, YAML parser, config loader
   log/                     Async/sync logging and blocking queue
   protocol/                KV text protocol and RESP request parsing/response encoding
-  storage/                 KVStore interface, memory store, WAL and snapshot persistence
+  storage/                 KVStore interface, memory store, TTL/LRU, WAL and snapshot persistence
+  net/                     Worker thread pool
 
 configs/
   kvserver.yaml            Default single-node config
@@ -24,6 +25,8 @@ configs/
 tests/
   unit/                    Unit tests
   integration/             Disabled integration tests requiring a running kvserver
+tools/
+  bench.cpp                RESP benchmark client
 ```
 
 Legacy web-server source directories have been removed. The active build target
@@ -71,7 +74,7 @@ This layer does not touch storage or sockets.
 Local storage engine layer.
 
 - `KVStore`: storage interface
-- `MemoryStore`: thread-safe in-memory map
+- `MemoryStore`: thread-safe in-memory map with TTL and LRU eviction
 - `WriteAheadLog`: append-only WAL file with truncation after snapshot
 - `SnapshotFile`: full-state snapshot save/load
 - `PersistentMemoryStore`: `MemoryStore` wrapped with snapshot load, WAL replay, and write-ahead persistence
@@ -82,10 +85,11 @@ Distributed routing layer.
 
 - `ClusterNode`: node identity and endpoint
 - `ConsistentHash`: maps keys to owner nodes
-- `ClusterRouter`: decides local vs remote ownership and forwards requests
+- `ClusterRouter`: health-checks peers, builds an alive-node ring, tracks the static Raft leader, chooses replica nodes, and forwards requests
 
-Current consistency model is weak consistency with owner routing. Replication
-and Raft are not implemented yet.
+Current cluster consistency supports best-effort replication and a static-leader
+Raft mode with majority write commits. Automatic election and log conflict
+repair are not implemented yet.
 
 ### `src/log/`
 
