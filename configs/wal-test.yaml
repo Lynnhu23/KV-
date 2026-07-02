@@ -1,0 +1,21 @@
+# Temporary WAL test configuration
+node:
+  id: "wal-test"
+  host: "0.0.0.0"
+  port: 19011
+  data_dir: "./data/wal-test"
+
+store:
+  engine: "memory"
+  wal_enabled: true
+  wal_file: "./data/wal-test/kv.wal"
+  snapshot_file: "./data/wal-test/kv.snapshot"
+  snapshot_threshold: 1000
+
+log:
+  write_mode: "async"
+  file: "./KVServerLog"
+  buffer_size: 8192
+  split_lines: 5000000
+  max_queue_size: 800
+  close: false

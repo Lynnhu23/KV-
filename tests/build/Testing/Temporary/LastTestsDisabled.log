@@ -1,0 +1,3 @@
+1:KVServerIntegrationTest.Ping
+2:KVServerIntegrationTest.PutGet
+3:KVServerIntegrationTest.Delete

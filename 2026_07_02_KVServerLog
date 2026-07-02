@@ -1,0 +1,68 @@
+2026-07-02 10:31:07.191065 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal
+2026-07-02 10:31:07.191103 [info]: KV node node-1 listening on 0.0.0.0:9006
+2026-07-02 10:31:39.358921 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal
+2026-07-02 10:31:39.358985 [info]: KV node node-1 listening on 0.0.0.0:9006
+2026-07-02 10:32:19.736306 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal
+2026-07-02 10:32:19.736322 [erro]: socket failed: Operation not permitted
+2026-07-02 10:32:30.051446 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal
+2026-07-02 10:32:30.051464 [erro]: socket failed: Operation not permitted
+2026-07-02 10:53:28.635271 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal
+2026-07-02 10:53:28.635303 [erro]: bind failed on 0.0.0.0:9006: Address already in use
+2026-07-02 11:03:24.971114 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal
+2026-07-02 11:03:24.971779 [info]: Worker thread pool started: threads=20
+2026-07-02 11:03:24.971796 [erro]: socket failed: Operation not permitted
+2026-07-02 11:03:46.729991 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal
+2026-07-02 11:03:46.730611 [info]: Worker thread pool started: threads=20
+2026-07-02 11:03:46.730954 [info]: KV node node-1 listening on 0.0.0.0:19007
+2026-07-02 11:04:36.415499 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal
+2026-07-02 11:04:36.416269 [info]: Worker thread pool started: threads=20
+2026-07-02 11:04:36.416595 [info]: KV node node-1 listening on 0.0.0.0:19007
+2026-07-02 11:08:25.856449 [info]: KV store initialized: engine=memory wal=./data/node-2/kv.wal
+2026-07-02 11:08:25.856761 [info]: Cluster routing enabled
+2026-07-02 11:08:25.857498 [info]: Worker thread pool started: threads=20
+2026-07-02 11:08:25.857527 [info]: KV node node-2 listening on 0.0.0.0:19022
+2026-07-02 11:08:25.855674 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal
+2026-07-02 11:08:25.855899 [info]: Cluster routing enabled
+2026-07-02 11:08:25.856528 [info]: Worker thread pool started: threads=20
+2026-07-02 11:08:25.856591 [info]: KV node node-1 listening on 0.0.0.0:19021
+2026-07-02 11:08:25.856916 [info]: KV store initialized: engine=memory wal=./data/node-5/kv.wal
+2026-07-02 11:08:25.857187 [info]: Cluster routing enabled
+2026-07-02 11:08:25.858433 [info]: Worker thread pool started: threads=20
+2026-07-02 11:08:25.858478 [info]: KV node node-5 listening on 0.0.0.0:19025
+2026-07-02 11:08:25.856681 [info]: KV store initialized: engine=memory wal=./data/node-3/kv.wal
+2026-07-02 11:08:25.856905 [info]: Cluster routing enabled
+2026-07-02 11:08:25.858160 [info]: Worker thread pool started: threads=20
+2026-07-02 11:08:25.858584 [info]: KV node node-3 listening on 0.0.0.0:19023
+2026-07-02 11:08:25.857043 [info]: KV store initialized: engine=memory wal=./data/node-4/kv.wal
+2026-07-02 11:08:25.857272 [info]: Cluster routing enabled
+2026-07-02 11:08:25.858395 [info]: Worker thread pool started: threads=20
+2026-07-02 11:08:25.858428 [info]: KV node node-4 listening on 0.0.0.0:19024
+2026-07-02 11:15:58.133585 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal snapshot=./data/node-1/kv.snapshot threshold=1000
+2026-07-02 11:15:58.134278 [info]: Worker thread pool started: threads=20
+2026-07-02 11:15:58.134295 [erro]: socket failed: Operation not permitted
+2026-07-02 11:16:08.592835 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal snapshot=./data/node-1/kv.snapshot threshold=1000
+2026-07-02 11:16:08.593543 [info]: Worker thread pool started: threads=20
+2026-07-02 11:16:08.593560 [erro]: socket failed: Operation not permitted
+2026-07-02 11:16:26.033188 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal snapshot=./data/node-1/kv.snapshot threshold=1000
+2026-07-02 11:16:26.033837 [info]: Worker thread pool started: threads=20
+2026-07-02 11:16:26.033888 [info]: KV node node-1 listening on 0.0.0.0:19007
+2026-07-02 11:17:05.528564 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal snapshot=./data/node-1/kv.snapshot threshold=1000
+2026-07-02 11:17:05.529201 [info]: Worker thread pool started: threads=20
+2026-07-02 11:17:05.529234 [erro]: bind failed on 0.0.0.0:9006: Address already in use
+2026-07-02 11:17:53.189864 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal snapshot=./data/node-1/kv.snapshot threshold=1000
+2026-07-02 11:17:53.190476 [info]: Worker thread pool started: threads=20
+2026-07-02 11:17:53.190511 [info]: KV node node-1 listening on 0.0.0.0:19007
+2026-07-02 11:21:01.014570 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal snapshot=./data/node-1/kv.snapshot threshold=1000
+2026-07-02 11:21:01.014790 [info]: Cluster routing enabled
+2026-07-02 11:21:01.015456 [info]: Worker thread pool started: threads=20
+2026-07-02 11:21:01.015489 [info]: KV node node-1 listening on 0.0.0.0:19021
+2026-07-02 11:19:32.926795 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal snapshot=./data/node-1/kv.snapshot threshold=1000
+2026-07-02 11:19:32.927493 [info]: Worker thread pool started: threads=20
+2026-07-02 11:19:32.927530 [info]: KV node node-1 listening on 0.0.0.0:9006
+2026-07-02 11:21:25.280226 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal snapshot=./data/node-1/kv.snapshot threshold=1000
+2026-07-02 11:21:25.280470 [info]: Cluster routing enabled
+2026-07-02 11:21:25.281170 [info]: Worker thread pool started: threads=20
+2026-07-02 11:21:25.281207 [info]: KV node node-1 listening on 0.0.0.0:19021
+2026-07-02 11:28:22.182892 [info]: KV store initialized: engine=memory wal=./data/node-1/kv.wal snapshot=./data/node-1/kv.snapshot threshold=1000
+2026-07-02 11:28:22.183614 [info]: Worker thread pool started: threads=20
+2026-07-02 11:28:22.183658 [info]: KV node node-1 listening on 0.0.0.0:9006
