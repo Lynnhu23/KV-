@@ -635,20 +635,111 @@ def start_node(node_id):
     return {"ok": True, "status": "starting", "pid": proc.pid}
 
 
+def listening_inodes_for_port(port):
+    target = f"{int(port):04X}"
+    inodes = set()
+    for table in ("/proc/net/tcp", "/proc/net/tcp6"):
+        try:
+            with open(table, "r", encoding="utf-8") as handle:
+                next(handle, None)
+                for line in handle:
+                    parts = line.split()
+                    if len(parts) < 10:
+                        continue
+                    local_address = parts[1]
+                    state = parts[3]
+                    inode = parts[9]
+                    if state != "0A":
+                        continue
+                    _, local_port = local_address.rsplit(":", 1)
+                    if local_port.upper() == target:
+                        inodes.add(inode)
+        except OSError:
+            continue
+    return inodes
+
+
+def cmdline_for_pid(pid):
+    try:
+        raw = Path(f"/proc/{pid}/cmdline").read_bytes()
+    except OSError:
+        return ""
+    return raw.replace(b"\x00", b" ").decode(errors="replace").strip()
+
+
+def find_kvserver_pid_by_port(port):
+    inodes = listening_inodes_for_port(port)
+    if not inodes:
+        return None
+
+    proc_root = Path("/proc")
+    for pid_dir in proc_root.iterdir():
+        if not pid_dir.name.isdigit():
+            continue
+        fd_dir = pid_dir / "fd"
+        try:
+            for fd in fd_dir.iterdir():
+                try:
+                    target = os.readlink(fd)
+                except OSError:
+                    continue
+                if not target.startswith("socket:[") or not target.endswith("]"):
+                    continue
+                inode = target[len("socket:["):-1]
+                if inode not in inodes:
+                    continue
+                cmdline = cmdline_for_pid(pid_dir.name)
+                if "kvserver" in cmdline:
+                    return int(pid_dir.name)
+        except OSError:
+            continue
+    return None
+
+
+def wait_until_down(node, timeout=2.0):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if not node_is_up(node):
+            return True
+        time.sleep(0.1)
+    return not node_is_up(node)
+
+
 def stop_node(node_id):
+    node = find_node(node_id)
+    if node is None:
+        return {"ok": False, "error": "unknown node"}
+
     with PROCESS_LOCK:
         proc = MANAGED_PROCESSES.pop(node_id, None)
-    if proc is None:
-        return {"ok": False, "error": "node was not started by dashboard"}
-
-    if proc.poll() is None:
+    if proc is not None and proc.poll() is None:
         proc.terminate()
         try:
             proc.wait(timeout=2)
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait(timeout=2)
-    return {"ok": True, "status": "stopped"}
+        return {"ok": True, "status": "stopped"}
+
+    pid = find_kvserver_pid_by_port(node["port"])
+    if pid is None:
+        if node_is_up(node):
+            return {"ok": False, "error": "node is running but pid was not found"}
+        return {"ok": True, "status": "already_stopped"}
+
+    try:
+        os.kill(pid, 15)
+    except ProcessLookupError:
+        return {"ok": True, "status": "already_stopped"}
+    except PermissionError:
+        return {"ok": False, "error": f"permission denied stopping pid {pid}"}
+
+    if not wait_until_down(node):
+        try:
+            os.kill(pid, 9)
+        except OSError:
+            pass
+    return {"ok": True, "status": "stopped", "pid": pid}
 
 
 def bench(port, requests, clients):
