@@ -43,6 +43,7 @@ make_configs() {
             -e "s#data_dir: \"./data/node-$i\"#data_dir: \"$TMP_DIR/data/node-$i\"#" \
             -e "s#wal_file: \"./data/node-$i/kv.wal\"#wal_file: \"$TMP_DIR/data/node-$i/kv.wal\"#" \
             -e "s#snapshot_file: \"./data/node-$i/kv.snapshot\"#snapshot_file: \"$TMP_DIR/data/node-$i/kv.snapshot\"#" \
+            -e "s/snapshot_threshold: 1000/snapshot_threshold: 3/" \
             -e "s#peers: \".*\"#peers: \"$peers\"#" \
             "$ROOT_DIR/configs/cluster-node$i.yaml" > "$cfg"
     done
@@ -226,5 +227,46 @@ if [[ "$status" != *"last_log="* ]]; then
     exit 1
 fi
 echo "PASS: raft status is available after restart"
+for i in 1 2 3; do
+    stop_node "$i"
+done
+
+echo "case 6: raft snapshot compacts log and catches up stale follower"
+rm -rf "$TMP_DIR/data"
+for i in 1 2 3 4 5; do
+    start_node "$i"
+    wait_for_ping "${ports[$i]}"
+done
+leader="$(wait_for_leader)"
+sleep 1
+leader="$(wait_for_leader)"
+for n in 1 2 3 4 5; do
+    expect_eq "$(redis_set "${ports[$leader]}" "fault:snap:$n" "v$n")" "OK" "snapshot warmup write $n"
+done
+sleep 0.5
+metrics="$(text_cmd "${ports[$leader]}" METRICS)"
+snapshot_index="$(printf '%s\n' "$metrics" | awk '/tinykv_raft_snapshot_last_included_index/ {print $2}')"
+if [[ -z "$snapshot_index" || "$snapshot_index" -le 0 ]]; then
+    echo "FAIL: expected leader snapshot index > 0, metrics: $metrics" >&2
+    exit 1
+fi
+echo "PASS: leader compacted raft log at snapshot index $snapshot_index"
+
+stale=3
+if [[ "$stale" == "$leader" ]]; then
+    stale=2
+fi
+stop_node "$stale"
+for n in 6 7 8 9 10; do
+    expect_eq "$(redis_set "${ports[$leader]}" "fault:snap:$n" "v$n")" "OK" "write while follower-$stale is down $n"
+done
+start_node "$stale"
+wait_for_ping "${ports[$stale]}"
+sleep 1
+leader="$(wait_for_leader)"
+expect_eq "$(redis_set "${ports[$leader]}" fault:snap:trigger trigger)" "OK" "trigger snapshot catch-up"
+sleep 1
+expect_eq "$(redis_get "${ports[$stale]}" fault:snap:10)" "v10" "stale follower catches up via snapshot"
+expect_eq "$(redis_get "${ports[$stale]}" fault:snap:trigger)" "trigger" "stale follower continues after snapshot"
 
 echo "all raft fault consistency tests passed"

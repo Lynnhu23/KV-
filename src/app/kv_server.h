@@ -53,9 +53,11 @@ private:
     std::string handle_raft_append_entries(const Request &request);
     bool apply_raft_entry_locked(const RaftLogEntry &entry);
     void apply_committed_raft_entries_locked();
+    void compact_raft_log_if_needed_locked();
     int raft_last_log_index_locked() const;
     int raft_last_log_term_locked() const;
     int raft_term_at_locked(int index) const;
+    int raft_log_offset_locked(int index) const;
     std::string encode_raft_append(const struct RaftLogEntry &entry,
                                    int prev_index,
                                    int prev_term,
@@ -64,7 +66,7 @@ private:
                                          int prev_index,
                                          int prev_term,
                                          int leader_commit) const;
-    std::string encode_raft_commit(int term, int leader_commit) const;
+    std::string encode_raft_commit(int term, int leader_commit, int prev_index, int prev_term) const;
     bool init_raft_persistence();
     bool load_raft_state();
     bool persist_raft_state_locked() const;
@@ -72,6 +74,7 @@ private:
     bool persist_raft_locked() const;
     std::vector<RaftLogEntry> decode_raft_entries_payload(const std::string &payload) const;
     std::string encode_snapshot_payload() const;
+    std::string encode_raft_snapshot(int term);
     bool install_snapshot_payload(const std::string &payload);
     void record_request_metrics(long long latency_us, bool failed);
     std::string metrics_response();
@@ -90,6 +93,9 @@ private:
     std::vector<RaftLogEntry> m_raft_log;
     int m_raft_commit_index = 0;
     int m_raft_last_applied = 0;
+    int m_raft_last_included_index = 0;
+    int m_raft_last_included_term = 0;
+    int m_raft_snapshot_threshold = 1000;
     std::string m_raft_log_file;
     std::string m_raft_state_file;
     std::chrono::steady_clock::time_point m_metrics_started_at;

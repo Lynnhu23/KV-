@@ -108,7 +108,9 @@ Raft 日志和元数据会持久化到节点 `data_dir`：
 - `raft.log`：已追加的 Raft log entry
 - `raft.state`：commitIndex 和 lastApplied
 
-RequestVote 会比较 candidate 的 `lastLogIndex/lastLogTerm`，避免日志落后的节点赢得选举。AppendEntries 支持批量 entry，follower 会校验 `prevLogIndex/prevLogTerm`，冲突时回退并重放。节点重启后会加载 Raft log/state，并恢复已提交状态。内部命令 `RAFT_INSTALL_SNAPSHOT` 支持安装 leader 发送的状态机快照；当前实现保留本地 Raft log，不做日志压缩后的 snapshot offset 管理。
+RequestVote 会比较 candidate 的 `lastLogIndex/lastLogTerm`，避免日志落后的节点赢得选举。AppendEntries 支持批量 entry，follower 会校验 `prevLogIndex/prevLogTerm`，冲突时回退并重放。节点重启后会加载 Raft log/state，并恢复已提交状态。
+
+Raft snapshot 支持 `lastIncludedIndex/lastIncludedTerm` offset 管理。节点 apply 的日志数量达到 `snapshot_threshold` 后，会将已应用日志压缩进状态机快照并截断 `raft.log`；当 follower 落后到 leader 已截断的日志之前，leader 会先发送 `RAFT_INSTALL_SNAPSHOT`，follower 安装快照后继续接收后续 AppendEntries。
 
 ## Persistence
 
@@ -195,7 +197,7 @@ make dashboard
 http://127.0.0.1:8080
 ```
 
-Dashboard 可以查看单机/五节点状态，执行 KV 命令、TTL 命令和本地压测。节点卡片会展示当前角色、term、leader、commitIndex/lastApplied、log size、QPS、p95/p99 延迟、alive 节点数、选举次数和复制失败次数。
+Dashboard 可以查看单机/五节点状态，执行 KV 命令、TTL 命令和本地压测。节点卡片会展示当前角色、term、leader、commitIndex/lastApplied、log size、snapshot lastIncludedIndex/Term、QPS、p95/p99 延迟、alive 节点数、选举次数和复制失败次数。
 
 Dashboard 也可以直接启动/停止节点。页面的每个节点卡片都有启动/停止按钮；`启动 node-1~3` 会拉起 Raft 最小多数派。
 
@@ -229,7 +231,7 @@ make demo-resp
 make test
 ```
 
-Raft 故障与一致性测试会自动启动临时 5 节点集群，覆盖多数派写入、少数派拒写、leader 故障重选和晚加入节点追日志：
+Raft 故障与一致性测试会自动启动临时 5 节点集群，覆盖多数派写入、少数派拒写、leader 故障重选、晚加入节点追日志、全节点重启恢复、snapshot 压缩和落后 follower 通过 snapshot 追赶：
 
 ```bash
 make test-raft

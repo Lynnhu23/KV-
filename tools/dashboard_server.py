@@ -429,6 +429,7 @@ INDEX_HTML = r"""<!doctype html>
         const commit = m.tinykv_raft_commit_index ?? '-';
         const applied = m.tinykv_raft_last_applied ?? '-';
         const logSize = m.tinykv_raft_log_size ?? '-';
+        const snapIndex = m.tinykv_raft_snapshot_last_included_index ?? '-';
         const qps = m.tinykv_qps ?? '-';
         const p95 = m.tinykv_latency_p95_us ?? '-';
         const p99 = m.tinykv_latency_p99_us ?? '-';
@@ -445,10 +446,10 @@ INDEX_HTML = r"""<!doctype html>
           <div class="node-metrics">
             <div class="node-metric"><span>term / leader</span><strong>${term} / ${leader}</strong></div>
             <div class="node-metric"><span>commit / apply</span><strong>${commit} / ${applied}</strong></div>
-            <div class="node-metric"><span>log / alive</span><strong>${logSize} / ${alive}</strong></div>
+            <div class="node-metric"><span>log / snap</span><strong>${logSize} / ${snapIndex}</strong></div>
             <div class="node-metric"><span>QPS</span><strong>${qps}</strong></div>
             <div class="node-metric"><span>p95 / p99 us</span><strong>${p95} / ${p99}</strong></div>
-            <div class="node-metric"><span>elect / repl fail</span><strong>${elections} / ${replFail}</strong></div>
+            <div class="node-metric"><span>alive / fail</span><strong>${alive} / ${replFail}</strong></div>
           </div>
           <div class="node-actions">
             <button class="start" data-node-start="${node.id}">启动</button>
