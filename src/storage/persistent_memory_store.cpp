@@ -127,6 +127,25 @@ std::vector<StoreEntry> PersistentMemoryStore::snapshot_entries() const
     return m_memory.snapshot_entries();
 }
 
+bool PersistentMemoryStore::replace_with_snapshot(const std::vector<StoreEntry> &entries)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (!m_memory.replace_with_snapshot(entries))
+    {
+        return false;
+    }
+    if (!m_snapshot.save(m_memory.snapshot_entries()))
+    {
+        return false;
+    }
+    if (!m_wal.reset())
+    {
+        return false;
+    }
+    m_ops_since_snapshot = 0;
+    return true;
+}
+
 bool PersistentMemoryStore::maybe_snapshot_locked()
 {
     if (m_snapshot_threshold == 0 || m_ops_since_snapshot < m_snapshot_threshold)

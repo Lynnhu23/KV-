@@ -60,6 +60,50 @@ bool parse_long(const std::string &text, long &out)
     }
 }
 
+int hex_value(char ch)
+{
+    if (ch >= '0' && ch <= '9')
+    {
+        return ch - '0';
+    }
+    if (ch >= 'a' && ch <= 'f')
+    {
+        return ch - 'a' + 10;
+    }
+    if (ch >= 'A' && ch <= 'F')
+    {
+        return ch - 'A' + 10;
+    }
+    return -1;
+}
+
+bool decode_hex(const std::string &encoded, std::string &decoded)
+{
+    if (encoded == "-")
+    {
+        decoded.clear();
+        return true;
+    }
+    if (encoded.size() % 2 != 0)
+    {
+        return false;
+    }
+
+    decoded.clear();
+    decoded.reserve(encoded.size() / 2);
+    for (size_t i = 0; i < encoded.size(); i += 2)
+    {
+        int high = hex_value(encoded[i]);
+        int low = hex_value(encoded[i + 1]);
+        if (high < 0 || low < 0)
+        {
+            return false;
+        }
+        decoded.push_back(static_cast<char>((high << 4) | low));
+    }
+    return true;
+}
+
 bool read_crlf_line(const std::string &frame, size_t &pos, std::string &line)
 {
     size_t end = frame.find("\r\n", pos);
@@ -208,6 +252,165 @@ Request parse_args(const std::vector<std::string> &args, ProtocolType protocol)
         }
         request.type = CommandType::Ttl;
         request.key = args[1];
+        return request;
+    }
+
+    if (command == "RAFT_REQUEST_VOTE")
+    {
+        if (args.size() != 3 && args.size() != 5)
+        {
+            return error_request("ERROR usage: RAFT_REQUEST_VOTE <term> <candidate_id> [last_log_index last_log_term]", protocol);
+        }
+        long term = 0;
+        if (!parse_long(args[1], term) || term < 0)
+        {
+            return error_request("ERROR invalid_term", protocol);
+        }
+        request.type = CommandType::RaftRequestVote;
+        request.term = static_cast<int>(term);
+        request.node_id = args[2];
+        if (args.size() == 5)
+        {
+            long last_index = 0;
+            long last_term = 0;
+            if (!parse_long(args[3], last_index) || last_index < 0 ||
+                !parse_long(args[4], last_term) || last_term < 0)
+            {
+                return error_request("ERROR invalid_raft_vote_log", protocol);
+            }
+            request.last_log_index = static_cast<int>(last_index);
+            request.last_log_term = static_cast<int>(last_term);
+        }
+        return request;
+    }
+
+    if (command == "RAFT_APPEND_ENTRIES")
+    {
+        if (args.size() != 3 && args.size() != 8 && args.size() != 12)
+        {
+            return error_request("ERROR usage: RAFT_APPEND_ENTRIES <term> <leader_id> [prev_index prev_term leader_commit entry_count payload_hex]", protocol);
+        }
+        long term = 0;
+        if (!parse_long(args[1], term) || term < 0)
+        {
+            return error_request("ERROR invalid_term", protocol);
+        }
+        request.type = CommandType::RaftAppendEntries;
+        request.term = static_cast<int>(term);
+        request.node_id = args[2];
+        if (args.size() == 3)
+        {
+            return request;
+        }
+
+        if (args.size() == 8)
+        {
+            long prev_index = 0;
+            long prev_term = 0;
+            long leader_commit = 0;
+            long entry_count = 0;
+            if (!parse_long(args[3], prev_index) || prev_index < 0 ||
+                !parse_long(args[4], prev_term) || prev_term < 0 ||
+                !parse_long(args[5], leader_commit) || leader_commit < 0 ||
+                !parse_long(args[6], entry_count) || entry_count < 0)
+            {
+                return error_request("ERROR invalid_raft_append", protocol);
+            }
+            std::string payload;
+            if (!decode_hex(args[7], payload))
+            {
+                return error_request("ERROR invalid_raft_hex", protocol);
+            }
+            request.prev_log_index = static_cast<int>(prev_index);
+            request.prev_log_term = static_cast<int>(prev_term);
+            request.leader_commit = static_cast<int>(leader_commit);
+            request.entry_count = static_cast<int>(entry_count);
+            request.snapshot_payload = payload;
+            request.log_index = 0;
+            return request;
+        }
+
+        long prev_index = 0;
+        long prev_term = 0;
+        long leader_commit = 0;
+        long entry_index = 0;
+        long entry_term = 0;
+        long ttl = 0;
+        if (!parse_long(args[3], prev_index) || prev_index < 0 ||
+            !parse_long(args[4], prev_term) || prev_term < 0 ||
+            !parse_long(args[5], leader_commit) || leader_commit < 0 ||
+            !parse_long(args[6], entry_index) || entry_index < 0 ||
+            !parse_long(args[7], entry_term) || entry_term < 0 ||
+            !parse_long(args[10], ttl) || ttl < 0)
+        {
+            return error_request("ERROR invalid_raft_append", protocol);
+        }
+
+        std::string key;
+        std::string value;
+        if (!decode_hex(args[9], key) || !decode_hex(args[11], value))
+        {
+            return error_request("ERROR invalid_raft_hex", protocol);
+        }
+
+        request.prev_log_index = static_cast<int>(prev_index);
+        request.prev_log_term = static_cast<int>(prev_term);
+        request.leader_commit = static_cast<int>(leader_commit);
+        request.log_index = static_cast<int>(entry_index);
+        request.log_term = static_cast<int>(entry_term);
+        request.raft_op = upper(args[8]);
+        request.key = key;
+        request.value = value;
+        request.ttl_seconds = static_cast<int>(ttl);
+        return request;
+    }
+
+    if (command == "RAFT_INSTALL_SNAPSHOT")
+    {
+        if (args.size() != 6)
+        {
+            return error_request("ERROR usage: RAFT_INSTALL_SNAPSHOT <term> <leader_id> <last_index> <last_term> <payload_hex>", protocol);
+        }
+        long term = 0;
+        long last_index = 0;
+        long last_term = 0;
+        if (!parse_long(args[1], term) || term < 0 ||
+            !parse_long(args[3], last_index) || last_index < 0 ||
+            !parse_long(args[4], last_term) || last_term < 0)
+        {
+            return error_request("ERROR invalid_snapshot_header", protocol);
+        }
+        std::string payload;
+        if (!decode_hex(args[5], payload))
+        {
+            return error_request("ERROR invalid_raft_hex", protocol);
+        }
+        request.type = CommandType::RaftInstallSnapshot;
+        request.term = static_cast<int>(term);
+        request.node_id = args[2];
+        request.last_log_index = static_cast<int>(last_index);
+        request.last_log_term = static_cast<int>(last_term);
+        request.snapshot_payload = payload;
+        return request;
+    }
+
+    if (command == "RAFT_STATUS")
+    {
+        if (args.size() != 1)
+        {
+            return error_request("ERROR usage: RAFT_STATUS", protocol);
+        }
+        request.type = CommandType::RaftStatus;
+        return request;
+    }
+
+    if (command == "METRICS")
+    {
+        if (args.size() != 1)
+        {
+            return error_request("ERROR usage: METRICS", protocol);
+        }
+        request.type = CommandType::Metrics;
         return request;
     }
 

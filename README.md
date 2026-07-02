@@ -1,5 +1,7 @@
 # TinyKVServer
 
+[![CI](https://github.com/Lynnhu23/KV-/actions/workflows/ci.yml/badge.svg)](https://github.com/Lynnhu23/KV-/actions/workflows/ci.yml)
+
 C++20 实现的轻量级分布式 KV 存储原型。
 
 当前能力：
@@ -13,11 +15,34 @@ C++20 实现的轻量级分布式 KV 存储原型。
 - 一致性哈希路由
 - 健康检查与存活节点路由
 - 多副本复制
-- Raft 模式多数派提交
+- Raft leader 选举、心跳、日志复制与多数派提交
 - 多节点请求转发
 - 同步/异步日志
 - YAML 配置
 - benchmark 压测工具
+
+## Architecture
+
+```mermaid
+flowchart LR
+    Client[redis-cli / nc / Dashboard] --> Server[KVServer<br/>epoll + ThreadPool]
+    Server --> Protocol[Protocol<br/>Text + RESP]
+    Server --> Router[ClusterRouter<br/>Health Check + Routing]
+    Server --> Store[KVStore<br/>Memory + TTL + LRU]
+    Store --> WAL[WAL]
+    Store --> Snapshot[Snapshot]
+    Router --> Raft[Raft<br/>Election + Log Replication]
+    Raft --> N1[node-1]
+    Raft --> N2[node-2]
+    Raft --> N3[node-3]
+    Raft --> N4[node-4]
+    Raft --> N5[node-5]
+    Server --> Metrics[METRICS<br/>QPS + Latency + Raft State]
+```
+
+## Screenshot
+
+![TinyKV Dashboard](docs/screenshots/dashboard.svg)
 
 ## Build
 
@@ -65,7 +90,7 @@ make run-cluster-5
 ./kvserver -f configs/cluster-node5.yaml  # 127.0.0.1:19025
 ```
 
-集群配置会定期健康检查 peer。默认五节点配置使用 Raft 模式，leader 为 `node-1`，写入需要多数派确认后才返回成功。
+集群配置会定期健康检查 peer。默认五节点配置使用 Raft 模式，节点启动后会通过投票自动选出 leader，写入需要多数派确认后才返回成功。五节点集群至少需要 3 个节点存活才能选主和提交写入。
 
 ```yaml
 cluster:
@@ -75,7 +100,15 @@ cluster:
   leader_id: "node-1"
 ```
 
-当前 Raft 实现是静态 leader + 多数派提交：follower 会把读写转发给 leader，leader 将写入复制到存活 follower，达到多数派后本地提交。暂未实现自动 leader 选举、任期持久化和日志冲突回退。
+Raft 模式包含任期、投票、leader 心跳、follower 自动转发到当前 leader、AppendEntries 日志复制、commitIndex/lastApplied 推进，以及 leader 写入多数派复制后提交。`leader_id` 只保留为兼容旧配置，实际 leader 由选举产生。
+
+Raft 日志和元数据会持久化到节点 `data_dir`：
+
+- `raft.meta`：当前 term 和 votedFor
+- `raft.log`：已追加的 Raft log entry
+- `raft.state`：commitIndex 和 lastApplied
+
+RequestVote 会比较 candidate 的 `lastLogIndex/lastLogTerm`，避免日志落后的节点赢得选举。AppendEntries 支持批量 entry，follower 会校验 `prevLogIndex/prevLogTerm`，冲突时回退并重放。节点重启后会加载 Raft log/state，并恢复已提交状态。内部命令 `RAFT_INSTALL_SNAPSHOT` 支持安装 leader 发送的状态机快照；当前实现保留本地 Raft log，不做日志压缩后的 snapshot offset 管理。
 
 ## Persistence
 
@@ -162,7 +195,27 @@ make dashboard
 http://127.0.0.1:8080
 ```
 
-Dashboard 可以查看单机/五节点状态，执行 KV 命令、TTL 命令和本地压测。
+Dashboard 可以查看单机/五节点状态，执行 KV 命令、TTL 命令和本地压测。节点卡片会展示当前角色、term、leader、commitIndex/lastApplied、log size、QPS、p95/p99 延迟、alive 节点数、选举次数和复制失败次数。
+
+Dashboard 也可以直接启动/停止节点。页面的每个节点卡片都有启动/停止按钮；`启动 node-1~3` 会拉起 Raft 最小多数派。
+
+Docker Compose 一键启动 Dashboard：
+
+```bash
+make compose-up
+```
+
+打开：
+
+```text
+http://127.0.0.1:8080
+```
+
+Compose 默认会自动启动 Dashboard 和 5 个 KV 节点。也可以在页面里手动停止/启动任意节点。停止 Compose：
+
+```bash
+make compose-down
+```
 
 没有 `redis-cli` 时可以直接发送 RESP 帧：
 
@@ -175,5 +228,51 @@ make demo-resp
 ```bash
 make test
 ```
+
+Raft 故障与一致性测试会自动启动临时 5 节点集群，覆盖多数派写入、少数派拒写、leader 故障重选和晚加入节点追日志：
+
+```bash
+make test-raft
+```
+
+## Fault Demo
+
+启动 5 节点和 Dashboard：
+
+```bash
+make compose-up
+```
+
+写入一条数据：
+
+```bash
+redis-cli -p 19021 set demo:raft ok
+redis-cli -p 19022 get demo:raft
+```
+
+在 Dashboard 里停止当前 `leader` 节点，等待 1-3 秒后刷新节点状态。新的 leader 选出后继续写入：
+
+```bash
+redis-cli -p 19023 set demo:after-failover yes
+redis-cli -p 19024 get demo:after-failover
+```
+
+也可以直接运行自动化故障演示：
+
+```bash
+make test-raft
+```
+
+它会覆盖多数派写入、少数派拒写、leader 故障重选、晚加入节点追日志和全节点重启恢复。
+
+## Repository Hygiene
+
+仓库只提交源码、配置、测试、文档和 Docker/CI 文件。以下运行产物已通过 `.gitignore` 排除：
+
+- `kvserver`、`bench`、`server`
+- `tests/build/`
+- `data/`
+- `*.wal`、`*.snapshot`、`*.meta`、`*.state`
+- `*_KVServerLog`、`*_ServerLog`
 
 项目结构见 [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)。

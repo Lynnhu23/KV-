@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends g++ make cmake netcat-openbsd redis-tools python3
+
+      - name: Build kvserver
+        run: make kvserver
+
+      - name: Run unit tests
+        run: make test
+
+      - name: Run Raft fault tests
+        run: make test-raft

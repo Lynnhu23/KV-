@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import json
+import os
 import socket
+import subprocess
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -10,13 +12,15 @@ from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 NODES = [
-    {"id": "single", "host": "127.0.0.1", "port": 9006},
-    {"id": "node-1", "host": "127.0.0.1", "port": 19021},
-    {"id": "node-2", "host": "127.0.0.1", "port": 19022},
-    {"id": "node-3", "host": "127.0.0.1", "port": 19023},
-    {"id": "node-4", "host": "127.0.0.1", "port": 19024},
-    {"id": "node-5", "host": "127.0.0.1", "port": 19025},
+    {"id": "single", "host": "127.0.0.1", "port": 9006, "config": "configs/kvserver.yaml"},
+    {"id": "node-1", "host": "127.0.0.1", "port": 19021, "config": "configs/cluster-node1.yaml"},
+    {"id": "node-2", "host": "127.0.0.1", "port": 19022, "config": "configs/cluster-node2.yaml"},
+    {"id": "node-3", "host": "127.0.0.1", "port": 19023, "config": "configs/cluster-node3.yaml"},
+    {"id": "node-4", "host": "127.0.0.1", "port": 19024, "config": "configs/cluster-node4.yaml"},
+    {"id": "node-5", "host": "127.0.0.1", "port": 19025, "config": "configs/cluster-node5.yaml"},
 ]
+PROCESS_LOCK = threading.Lock()
+MANAGED_PROCESSES = {}
 
 
 INDEX_HTML = r"""<!doctype html>
@@ -118,7 +122,7 @@ INDEX_HTML = r"""<!doctype html>
       gap: 10px;
     }
     .node {
-      min-height: 92px;
+      min-height: 190px;
       border: 1px solid var(--line);
       border-radius: 8px;
       padding: 12px;
@@ -134,6 +138,51 @@ INDEX_HTML = r"""<!doctype html>
     .dot.down { background: var(--red); }
     .node-port { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
     .node-latency { color: var(--muted); font-size: 12px; }
+    .role {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #eef2ff;
+      color: #3730a3;
+    }
+    .role.leader { background: #dcfce7; color: #166534; }
+    .role.candidate { background: #fef3c7; color: #92400e; }
+    .role.follower { background: #e0f2fe; color: #075985; }
+    .node-metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .node-metric {
+      min-width: 0;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 6px 7px;
+      background: #fff;
+    }
+    .node-metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.2;
+    }
+    .node-metric strong {
+      display: block;
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+    }
+    .node-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+    .node-actions button { min-height: 30px; font-size: 12px; }
+    .node-actions .start { color: #fff; background: var(--green); border-color: var(--green); }
+    .node-actions .stop { color: #fff; background: var(--red); border-color: var(--red); }
     .controls {
       display: grid;
       grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -239,6 +288,7 @@ INDEX_HTML = r"""<!doctype html>
             节点状态
           </div>
           <button id="refreshNodes">刷新</button>
+          <button id="startRaft">启动 node-1~3</button>
         </div>
         <div class="panel-body">
           <div class="node-grid" id="nodes"></div>
@@ -371,15 +421,55 @@ INDEX_HTML = r"""<!doctype html>
       let up = 0;
       for (const node of data.nodes) {
         if (node.up) up++;
+        const m = node.metrics || {};
+        const role = m.tinykv_raft_role || (node.up ? 'single' : 'offline');
+        const roleClass = ['leader', 'candidate', 'follower'].includes(role) ? role : '';
+        const leader = m.tinykv_raft_leader || '-';
+        const term = m.tinykv_raft_term ?? '-';
+        const commit = m.tinykv_raft_commit_index ?? '-';
+        const applied = m.tinykv_raft_last_applied ?? '-';
+        const logSize = m.tinykv_raft_log_size ?? '-';
+        const qps = m.tinykv_qps ?? '-';
+        const p95 = m.tinykv_latency_p95_us ?? '-';
+        const p99 = m.tinykv_latency_p99_us ?? '-';
+        const alive = m.tinykv_alive_nodes ?? '-';
+        const elections = m.tinykv_raft_election_count ?? '-';
+        const replFail = m.tinykv_raft_replication_failure_count ?? '-';
         const el = document.createElement('div');
         el.className = 'node';
         el.innerHTML = `
           <div class="node-top"><div class="node-name">${node.id}</div><div class="dot ${node.up ? 'up' : 'down'}"></div></div>
           <div class="node-port">${node.host}:${node.port}</div>
-          <div class="node-latency">${node.up ? node.latency_ms + ' ms' : 'offline'}</div>`;
+          <div class="node-latency">${node.up ? node.latency_ms + ' ms' : 'offline'}${node.managed ? ' / managed' : ''}</div>
+          <div class="role ${roleClass}">${role}</div>
+          <div class="node-metrics">
+            <div class="node-metric"><span>term / leader</span><strong>${term} / ${leader}</strong></div>
+            <div class="node-metric"><span>commit / apply</span><strong>${commit} / ${applied}</strong></div>
+            <div class="node-metric"><span>log / alive</span><strong>${logSize} / ${alive}</strong></div>
+            <div class="node-metric"><span>QPS</span><strong>${qps}</strong></div>
+            <div class="node-metric"><span>p95 / p99 us</span><strong>${p95} / ${p99}</strong></div>
+            <div class="node-metric"><span>elect / repl fail</span><strong>${elections} / ${replFail}</strong></div>
+          </div>
+          <div class="node-actions">
+            <button class="start" data-node-start="${node.id}">启动</button>
+            <button class="stop" data-node-stop="${node.id}">停止</button>
+          </div>`;
         nodes.appendChild(el);
       }
+      document.querySelectorAll('[data-node-start]').forEach(btn => {
+        btn.onclick = () => controlNode(btn.dataset.nodeStart, 'start');
+      });
+      document.querySelectorAll('[data-node-stop]').forEach(btn => {
+        btn.onclick = () => controlNode(btn.dataset.nodeStop, 'stop');
+      });
       document.getElementById('summary').textContent = `${up}/${data.nodes.length} online`;
+    }
+
+    async function controlNode(id, action) {
+      const data = await api(`/api/node/${action}`, {id});
+      log(`${action} ${id} -> ${data.ok ? 'OK' : data.error}`);
+      await new Promise(resolve => setTimeout(resolve, 450));
+      await refreshNodes();
     }
 
     async function send(command) {
@@ -391,6 +481,11 @@ INDEX_HTML = r"""<!doctype html>
     }
 
     document.getElementById('refreshNodes').onclick = refreshNodes;
+    document.getElementById('startRaft').onclick = async () => {
+      for (const id of ['node-1', 'node-2', 'node-3']) {
+        await controlNode(id, 'start');
+      }
+    };
     document.getElementById('sendRaw').onclick = () => send(document.getElementById('raw').value);
     document.querySelectorAll('[data-op]').forEach(btn => {
       btn.onclick = () => {
@@ -449,6 +544,111 @@ def send_command(port, command, host="127.0.0.1", timeout=1.5):
                 break
             chunks.append(chunk)
     return b"".join(chunks).decode(errors="replace")
+
+
+def find_node(node_id):
+    for node in NODES:
+        if node["id"] == node_id:
+            return node
+    return None
+
+
+def node_is_up(node):
+    try:
+        return send_command(node["port"], "PING", timeout=0.35).strip() == "PONG"
+    except OSError:
+        return False
+
+
+def parse_metrics(text):
+    metrics = {}
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        parts = line.split(None, 1)
+        if len(parts) != 2:
+            continue
+        key, value = parts
+        if value.isdigit():
+            metrics[key] = int(value)
+            continue
+        try:
+            metrics[key] = float(value)
+        except ValueError:
+            metrics[key] = value
+    return metrics
+
+
+def node_metrics(node):
+    try:
+        return parse_metrics(send_command(node["port"], "METRICS", timeout=0.8))
+    except OSError:
+        return {}
+
+
+def managed_status(node_id):
+    with PROCESS_LOCK:
+        proc = MANAGED_PROCESSES.get(node_id)
+        if proc is None:
+            return False
+        if proc.poll() is not None:
+            MANAGED_PROCESSES.pop(node_id, None)
+            return False
+        return True
+
+
+def start_node(node_id):
+    node = find_node(node_id)
+    if node is None:
+        return {"ok": False, "error": "unknown node"}
+    if node_is_up(node):
+        return {"ok": True, "status": "already_running"}
+
+    config = ROOT / node["config"]
+    if not config.exists():
+        return {"ok": False, "error": f"missing config: {node['config']}"}
+    binary = ROOT / "kvserver"
+    if not binary.exists():
+        return {"ok": False, "error": "missing ./kvserver, run make kvserver first"}
+
+    log_dir = ROOT / "data" / "dashboard"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = open(log_dir / f"{node_id}.log", "ab", buffering=0)
+    proc = subprocess.Popen(
+        [str(binary), "-f", str(config)],
+        cwd=str(ROOT),
+        stdout=log_file,
+        stderr=subprocess.STDOUT,
+        start_new_session=True,
+    )
+    with PROCESS_LOCK:
+        MANAGED_PROCESSES[node_id] = proc
+
+    time.sleep(0.35)
+    if node_is_up(node):
+        return {"ok": True, "status": "started", "pid": proc.pid}
+    if proc.poll() is not None:
+        with PROCESS_LOCK:
+            MANAGED_PROCESSES.pop(node_id, None)
+        return {"ok": False, "error": f"process exited, see data/dashboard/{node_id}.log"}
+    return {"ok": True, "status": "starting", "pid": proc.pid}
+
+
+def stop_node(node_id):
+    with PROCESS_LOCK:
+        proc = MANAGED_PROCESSES.pop(node_id, None)
+    if proc is None:
+        return {"ok": False, "error": "node was not started by dashboard"}
+
+    if proc.poll() is None:
+        proc.terminate()
+        try:
+            proc.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=2)
+    return {"ok": True, "status": "stopped"}
 
 
 def bench(port, requests, clients):
@@ -541,13 +741,17 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     response = send_command(node["port"], "PING", timeout=0.35)
                     up = response.strip() == "PONG"
+                    metrics = node_metrics(node) if up else {}
                     error = ""
                 except OSError as exc:
                     up = False
+                    metrics = {}
                     error = str(exc)
                 nodes.append({
                     **node,
                     "up": up,
+                    "metrics": metrics,
+                    "managed": managed_status(node["id"]),
                     "latency_ms": round((time.perf_counter() - begin) * 1000, 2),
                     "error": error,
                 })
@@ -572,12 +776,25 @@ class Handler(BaseHTTPRequestHandler):
             except OSError as exc:
                 self.json_response({"ok": False, "error": str(exc)}, 502)
             return
+        if path == "/api/node/start":
+            self.json_response(start_node(body.get("id", "")))
+            return
+        if path == "/api/node/stop":
+            self.json_response(stop_node(body.get("id", "")))
+            return
         self.send_error(404)
 
 
 def main():
-    server = ThreadingHTTPServer(("127.0.0.1", 8080), Handler)
-    print("TinyKV Dashboard: http://127.0.0.1:8080")
+    host = os.environ.get("TINYKV_DASHBOARD_HOST", "127.0.0.1")
+    port = int(os.environ.get("TINYKV_DASHBOARD_PORT", "8080"))
+    autostart = os.environ.get("TINYKV_DASHBOARD_AUTOSTART", "")
+    for node_id in [item.strip() for item in autostart.split(",") if item.strip()]:
+        result = start_node(node_id)
+        print(f"autostart {node_id}: {result}")
+    server = ThreadingHTTPServer((host, port), Handler)
+    display_host = "127.0.0.1" if host == "0.0.0.0" else host
+    print(f"TinyKV Dashboard: http://{display_host}:{port}")
     server.serve_forever()
 
 

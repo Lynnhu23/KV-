@@ -39,7 +39,7 @@ kvserver: $(APP_SRC)
 clean:
 	rm -f kvserver bench
 
-.PHONY: run demo demo-resp run-cluster run-cluster-1 run-cluster-2 run-cluster-3 run-cluster-4 run-cluster-5 demo-cluster bench dashboard test
+.PHONY: run demo demo-resp run-cluster run-cluster-1 run-cluster-2 run-cluster-3 run-cluster-4 run-cluster-5 demo-cluster bench dashboard compose-up compose-down test test-raft
 run: kvserver
 	./kvserver
 
@@ -85,5 +85,14 @@ bench: tools/bench.cpp
 dashboard:
 	python3 tools/dashboard_server.py
 
+compose-up:
+	docker compose up --build
+
+compose-down:
+	docker compose down
+
 test:
 	cd tests && mkdir -p build && cd build && cmake .. && make && ctest --output-on-failure
+
+test-raft: kvserver
+	bash tests/integration/raft_fault_consistency.sh

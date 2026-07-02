@@ -26,6 +26,7 @@ public:
     void set_max_keys(size_t max_keys) override;
     size_t size() const override;
     std::vector<StoreEntry> snapshot_entries() const override;
+    bool replace_with_snapshot(const std::vector<StoreEntry> &entries) override;
     std::unordered_map<std::string, std::string> snapshot() const;
     void clear();
 

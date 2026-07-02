@@ -32,6 +32,7 @@ public:
     virtual void set_max_keys(size_t max_keys) = 0;
     virtual size_t size() const = 0;
     virtual std::vector<StoreEntry> snapshot_entries() const = 0;
+    virtual bool replace_with_snapshot(const std::vector<StoreEntry> &entries) = 0;
 };
 
 #endif

@@ -159,6 +159,24 @@ std::vector<StoreEntry> MemoryStore::snapshot_entries() const
     return entries;
 }
 
+bool MemoryStore::replace_with_snapshot(const std::vector<StoreEntry> &entries)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_data.clear();
+    m_lru.clear();
+    for (const auto &entry : entries)
+    {
+        if (entry.key.empty())
+        {
+            return false;
+        }
+        m_lru.push_front(entry.key);
+        m_data[entry.key] = Entry{entry.value, entry.expire_at_ms, m_lru.begin()};
+    }
+    enforce_capacity_locked();
+    return true;
+}
+
 std::unordered_map<std::string, std::string> MemoryStore::snapshot() const
 {
     std::lock_guard<std::mutex> lock(m_mutex);

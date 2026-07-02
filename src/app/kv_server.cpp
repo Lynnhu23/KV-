@@ -15,8 +15,13 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <chrono>
+#include <filesystem>
+#include <fstream>
+#include <iomanip>
 #include <optional>
+#include <sstream>
 #include <thread>
 
 namespace
@@ -276,11 +281,79 @@ std::string raft_command_for(const Request &request)
         return "";
     }
 }
+
+std::string hex_encode(const std::string &value)
+{
+    if (value.empty())
+    {
+        return "-";
+    }
+
+    std::ostringstream output;
+    output << std::hex << std::setfill('0');
+    for (unsigned char ch : value)
+    {
+        output << std::setw(2) << static_cast<int>(ch);
+    }
+    return output.str();
+}
+
+bool parse_raft_append_response(const std::string &response, int &term, bool &success, int &match_index)
+{
+    std::istringstream input(response);
+    std::string tag;
+    int success_value = 0;
+    if (!(input >> tag >> term >> success_value >> match_index))
+    {
+        return false;
+    }
+    if (tag != "RAFT_APPEND")
+    {
+        return false;
+    }
+    success = success_value == 1;
+    return true;
+}
+
+int local_hex_value(char ch)
+{
+    if (ch >= '0' && ch <= '9') return ch - '0';
+    if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
+    if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
+    return -1;
+}
+
+bool hex_decode(const std::string &encoded, std::string &decoded)
+{
+    if (encoded == "-")
+    {
+        decoded.clear();
+        return true;
+    }
+    if (encoded.size() % 2 != 0)
+    {
+        return false;
+    }
+    decoded.clear();
+    decoded.reserve(encoded.size() / 2);
+    for (size_t i = 0; i < encoded.size(); i += 2)
+    {
+        int high = local_hex_value(encoded[i]);
+        int low = local_hex_value(encoded[i + 1]);
+        if (high < 0 || low < 0)
+        {
+            return false;
+        }
+        decoded.push_back(static_cast<char>((high << 4) | low));
+    }
+    return true;
+}
 }
 
 KVServer::KVServer()
     : m_listenfd(-1), m_epollfd(-1), m_running(false)
 {
+    m_metrics_started_at = std::chrono::steady_clock::now();
     g_server = this;
 }
 
@@ -296,7 +369,7 @@ KVServer::~KVServer()
 bool KVServer::init(int argc, char *argv[])
 {
     if (!init_config(argc, argv) || !init_log() || !init_store() ||
-        !init_cluster() || !init_thread_pool())
+        !init_cluster() || !init_raft_persistence() || !init_thread_pool())
     {
         return false;
     }
@@ -475,6 +548,7 @@ int KVServer::start()
 void KVServer::stop()
 {
     m_running = false;
+    m_router.stop();
     if (m_epollfd >= 0)
     {
         close(m_epollfd);
@@ -702,7 +776,16 @@ void KVServer::process_client_lines(int client_fd, std::vector<std::string> line
     std::string response;
     for (const auto &line : lines)
     {
-        response += process_request_line(line);
+        auto begin = std::chrono::steady_clock::now();
+        std::string line_response = process_request_line(line);
+        auto elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                              std::chrono::steady_clock::now() - begin)
+                              .count();
+        bool failed = line_response.rfind("ERROR", 0) == 0 ||
+                      line_response.rfind("-ERR", 0) == 0 ||
+                      line_response.rfind("-ERROR", 0) == 0;
+        record_request_metrics(elapsed_us, failed);
+        response += line_response;
     }
 
     if (!response.empty() && !send_all(client_fd, response))
@@ -720,6 +803,649 @@ void KVServer::process_client_lines(int client_fd, std::vector<std::string> line
     rearm_client(client_fd);
 }
 
+void KVServer::record_request_metrics(long long latency_us, bool failed)
+{
+    m_requests_total.fetch_add(1, std::memory_order_relaxed);
+    if (failed)
+    {
+        m_failed_requests_total.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    std::lock_guard<std::mutex> lock(m_latency_mutex);
+    m_recent_latencies_us.push_back(latency_us);
+    constexpr size_t kMaxRecentLatencies = 4096;
+    if (m_recent_latencies_us.size() > kMaxRecentLatencies)
+    {
+        m_recent_latencies_us.erase(m_recent_latencies_us.begin(),
+                                    m_recent_latencies_us.begin() +
+                                        static_cast<long long>(m_recent_latencies_us.size() - kMaxRecentLatencies));
+    }
+}
+
+std::string KVServer::metrics_response()
+{
+    std::vector<long long> latencies;
+    {
+        std::lock_guard<std::mutex> lock(m_latency_mutex);
+        latencies = m_recent_latencies_us;
+    }
+    std::sort(latencies.begin(), latencies.end());
+
+    auto percentile = [&](double p) -> long long {
+        if (latencies.empty())
+        {
+            return 0;
+        }
+        size_t index = static_cast<size_t>((latencies.size() - 1) * p);
+        return latencies[index];
+    };
+
+    int commit_index = 0;
+    int last_applied = 0;
+    int last_log = 0;
+    size_t log_size = 0;
+    {
+        std::lock_guard<std::mutex> lock(m_raft_log_mutex);
+        commit_index = m_raft_commit_index;
+        last_applied = m_raft_last_applied;
+        last_log = raft_last_log_index_locked();
+        log_size = m_raft_log.size();
+    }
+
+    auto requests = m_requests_total.load(std::memory_order_relaxed);
+    auto failed = m_failed_requests_total.load(std::memory_order_relaxed);
+    auto replication_failures = m_replication_failures_total.load(std::memory_order_relaxed);
+    double elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - m_metrics_started_at).count();
+    if (elapsed <= 0)
+    {
+        elapsed = 1;
+    }
+
+    std::ostringstream output;
+    size_t alive_nodes = m_router.enabled() ? m_router.alive_nodes().size() : 1;
+    output << "tinykv_node_id " << m_router.local_id() << "\n";
+    output << "tinykv_raft_role " << (m_router.raft_enabled() ? m_router.role_name() : "standalone") << "\n";
+    output << "tinykv_raft_term " << m_router.current_term() << "\n";
+    output << "tinykv_raft_leader " << m_router.leader_id() << "\n";
+    output << "tinykv_raft_commit_index " << commit_index << "\n";
+    output << "tinykv_raft_last_applied " << last_applied << "\n";
+    output << "tinykv_raft_log_size " << log_size << "\n";
+    output << "tinykv_raft_last_log_index " << last_log << "\n";
+    output << "tinykv_raft_election_count " << m_router.election_count() << "\n";
+    output << "tinykv_raft_replication_failure_count " << replication_failures << "\n";
+    output << "tinykv_alive_nodes " << alive_nodes << "\n";
+    output << "tinykv_store_keys " << m_store->size() << "\n";
+    output << "tinykv_requests_total " << requests << "\n";
+    output << "tinykv_failed_requests_total " << failed << "\n";
+    output << "tinykv_qps " << static_cast<unsigned long long>(requests / elapsed) << "\n";
+    output << "tinykv_latency_p95_us " << percentile(0.95) << "\n";
+    output << "tinykv_latency_p99_us " << percentile(0.99) << "\n";
+    return output.str();
+}
+
+int KVServer::raft_last_log_index_locked() const
+{
+    return m_raft_log.empty() ? 0 : m_raft_log.back().index;
+}
+
+int KVServer::raft_last_log_term_locked() const
+{
+    return m_raft_log.empty() ? 0 : m_raft_log.back().term;
+}
+
+int KVServer::raft_term_at_locked(int index) const
+{
+    if (index <= 0)
+    {
+        return 0;
+    }
+    size_t offset = static_cast<size_t>(index - 1);
+    if (offset >= m_raft_log.size())
+    {
+        return -1;
+    }
+    return m_raft_log[offset].term;
+}
+
+bool KVServer::init_raft_persistence()
+{
+    const auto &node_cfg = m_config.server_config.node;
+    std::filesystem::create_directories(node_cfg.data_dir);
+    m_raft_log_file = node_cfg.data_dir + "/raft.log";
+    m_raft_state_file = node_cfg.data_dir + "/raft.state";
+    if (!load_raft_state())
+    {
+        return false;
+    }
+    std::lock_guard<std::mutex> lock(m_raft_log_mutex);
+    m_router.update_log_info(raft_last_log_index_locked(), raft_last_log_term_locked());
+    apply_committed_raft_entries_locked();
+    return true;
+}
+
+bool KVServer::load_raft_state()
+{
+    std::lock_guard<std::mutex> lock(m_raft_log_mutex);
+    m_raft_log.clear();
+    m_raft_commit_index = 0;
+    m_raft_last_applied = 0;
+
+    {
+        std::ifstream state(m_raft_state_file);
+        std::string key;
+        while (state >> key)
+        {
+            if (key == "commit_index")
+            {
+                state >> m_raft_commit_index;
+            }
+            else if (key == "last_applied")
+            {
+                state >> m_raft_last_applied;
+            }
+        }
+        m_raft_last_applied = std::min(m_raft_last_applied, m_raft_commit_index);
+    }
+
+    std::ifstream log(m_raft_log_file);
+    if (!log.is_open())
+    {
+        return true;
+    }
+
+    std::string line;
+    while (std::getline(log, line))
+    {
+        if (line.empty())
+        {
+            continue;
+        }
+        std::istringstream input(line);
+        int index = 0;
+        int term = 0;
+        std::string op;
+        std::string key_hex;
+        int ttl = 0;
+        std::string value_hex;
+        if (!(input >> index >> term >> op >> key_hex >> ttl >> value_hex))
+        {
+            return false;
+        }
+        std::string key;
+        std::string value;
+        if (!hex_decode(key_hex, key) || !hex_decode(value_hex, value))
+        {
+            return false;
+        }
+        CommandType type = CommandType::Unknown;
+        if (op == "PUT") type = CommandType::Put;
+        if (op == "DEL") type = CommandType::Del;
+        if (op == "EXPIRE") type = CommandType::Expire;
+        if (type == CommandType::Unknown)
+        {
+            return false;
+        }
+        m_raft_log.push_back({index, term, type, key, value, ttl});
+    }
+    m_raft_commit_index = std::min(m_raft_commit_index, raft_last_log_index_locked());
+    m_raft_last_applied = std::min(m_raft_last_applied, m_raft_commit_index);
+    return true;
+}
+
+bool KVServer::persist_raft_state_locked() const
+{
+    if (m_raft_state_file.empty())
+    {
+        return true;
+    }
+    std::filesystem::path path(m_raft_state_file);
+    if (path.has_parent_path())
+    {
+        std::filesystem::create_directories(path.parent_path());
+    }
+    std::ofstream out(m_raft_state_file, std::ios::trunc);
+    if (!out.is_open())
+    {
+        return false;
+    }
+    out << "commit_index " << m_raft_commit_index << "\n";
+    out << "last_applied " << m_raft_last_applied << "\n";
+    return static_cast<bool>(out);
+}
+
+bool KVServer::persist_raft_log_locked() const
+{
+    if (m_raft_log_file.empty())
+    {
+        return true;
+    }
+    std::filesystem::path path(m_raft_log_file);
+    if (path.has_parent_path())
+    {
+        std::filesystem::create_directories(path.parent_path());
+    }
+    std::ofstream out(m_raft_log_file, std::ios::trunc);
+    if (!out.is_open())
+    {
+        return false;
+    }
+    for (const auto &entry : m_raft_log)
+    {
+        std::string op = entry.type == CommandType::Put ? "PUT" :
+                         entry.type == CommandType::Del ? "DEL" :
+                         entry.type == CommandType::Expire ? "EXPIRE" : "UNKNOWN";
+        out << entry.index << ' ' << entry.term << ' ' << op << ' '
+            << hex_encode(entry.key) << ' ' << entry.ttl_seconds << ' '
+            << hex_encode(entry.value) << '\n';
+    }
+    return static_cast<bool>(out);
+}
+
+bool KVServer::persist_raft_locked() const
+{
+    return persist_raft_log_locked() && persist_raft_state_locked();
+}
+
+bool KVServer::apply_raft_entry_locked(const RaftLogEntry &entry)
+{
+    switch (entry.type)
+    {
+    case CommandType::Put:
+        return entry.ttl_seconds > 0
+                   ? m_store->put_ttl(entry.key, entry.value, entry.ttl_seconds)
+                   : m_store->put(entry.key, entry.value);
+    case CommandType::Del:
+        m_store->del(entry.key);
+        return true;
+    case CommandType::Expire:
+        m_store->expire(entry.key, entry.ttl_seconds);
+        return true;
+    default:
+        return false;
+    }
+}
+
+void KVServer::apply_committed_raft_entries_locked()
+{
+    while (m_raft_last_applied < m_raft_commit_index &&
+           static_cast<size_t>(m_raft_last_applied) < m_raft_log.size())
+    {
+        RaftLogEntry &entry = m_raft_log[static_cast<size_t>(m_raft_last_applied)];
+        apply_raft_entry_locked(entry);
+        m_raft_last_applied = entry.index;
+    }
+    persist_raft_state_locked();
+}
+
+std::string KVServer::encode_raft_append(const RaftLogEntry &entry,
+                                         int prev_index,
+                                         int prev_term,
+                                         int leader_commit) const
+{
+    std::string op = "NOOP";
+    if (entry.type == CommandType::Put)
+    {
+        op = "PUT";
+    }
+    else if (entry.type == CommandType::Del)
+    {
+        op = "DEL";
+    }
+    else if (entry.type == CommandType::Expire)
+    {
+        op = "EXPIRE";
+    }
+
+    return "RAFT_APPEND_ENTRIES " + std::to_string(entry.term) + " " + m_router.local_id() + " " +
+           std::to_string(prev_index) + " " + std::to_string(prev_term) + " " +
+           std::to_string(leader_commit) + " " + std::to_string(entry.index) + " " +
+           std::to_string(entry.term) + " " + op + " " + hex_encode(entry.key) + " " +
+           std::to_string(entry.ttl_seconds) + " " + hex_encode(entry.value) + "\n";
+}
+
+std::string KVServer::encode_raft_append_batch(const std::vector<RaftLogEntry> &entries,
+                                               int prev_index,
+                                               int prev_term,
+                                               int leader_commit) const
+{
+    std::ostringstream payload;
+    for (const auto &entry : entries)
+    {
+        std::string op = entry.type == CommandType::Put ? "PUT" :
+                         entry.type == CommandType::Del ? "DEL" :
+                         entry.type == CommandType::Expire ? "EXPIRE" : "UNKNOWN";
+        payload << entry.index << ' ' << entry.term << ' ' << op << ' '
+                << hex_encode(entry.key) << ' ' << entry.ttl_seconds << ' '
+                << hex_encode(entry.value) << '\n';
+    }
+    int term = entries.empty() ? m_router.current_term() : entries.back().term;
+    return "RAFT_APPEND_ENTRIES " + std::to_string(term) + " " + m_router.local_id() + " " +
+           std::to_string(prev_index) + " " + std::to_string(prev_term) + " " +
+           std::to_string(leader_commit) + " " + std::to_string(entries.size()) + " " +
+           hex_encode(payload.str()) + "\n";
+}
+
+std::string KVServer::encode_raft_commit(int term, int leader_commit) const
+{
+    return "RAFT_APPEND_ENTRIES " + std::to_string(term) + " " + m_router.local_id() +
+           " 0 0 " + std::to_string(leader_commit) + " 0 0 NOOP - 0 -\n";
+}
+
+std::vector<KVServer::RaftLogEntry> KVServer::decode_raft_entries_payload(const std::string &payload) const
+{
+    std::vector<RaftLogEntry> entries;
+    std::istringstream lines(payload);
+    std::string line;
+    while (std::getline(lines, line))
+    {
+        if (line.empty())
+        {
+            continue;
+        }
+        std::istringstream input(line);
+        int index = 0;
+        int term = 0;
+        std::string op;
+        std::string key_hex;
+        int ttl = 0;
+        std::string value_hex;
+        if (!(input >> index >> term >> op >> key_hex >> ttl >> value_hex))
+        {
+            return {};
+        }
+        std::string key;
+        std::string value;
+        if (!hex_decode(key_hex, key) || !hex_decode(value_hex, value))
+        {
+            return {};
+        }
+        CommandType type = CommandType::Unknown;
+        if (op == "PUT") type = CommandType::Put;
+        if (op == "DEL") type = CommandType::Del;
+        if (op == "EXPIRE") type = CommandType::Expire;
+        if (type == CommandType::Unknown)
+        {
+            return {};
+        }
+        entries.push_back({index, term, type, key, value, ttl});
+    }
+    return entries;
+}
+
+std::string KVServer::encode_snapshot_payload() const
+{
+    std::ostringstream payload;
+    for (const auto &entry : m_store->snapshot_entries())
+    {
+        payload << hex_encode(entry.key) << ' ' << hex_encode(entry.value) << ' '
+                << entry.expire_at_ms << '\n';
+    }
+    return payload.str();
+}
+
+bool KVServer::install_snapshot_payload(const std::string &payload)
+{
+    std::vector<StoreEntry> entries;
+    std::istringstream lines(payload);
+    std::string line;
+    while (std::getline(lines, line))
+    {
+        if (line.empty())
+        {
+            continue;
+        }
+        std::istringstream input(line);
+        std::string key_hex;
+        std::string value_hex;
+        long long expire_at_ms = 0;
+        if (!(input >> key_hex >> value_hex >> expire_at_ms))
+        {
+            return false;
+        }
+        std::string key;
+        std::string value;
+        if (!hex_decode(key_hex, key) || !hex_decode(value_hex, value))
+        {
+            return false;
+        }
+        entries.push_back({key, value, expire_at_ms});
+    }
+    return m_store->replace_with_snapshot(entries);
+}
+
+std::string KVServer::handle_raft_append_entries(const Request &request)
+{
+    std::string heartbeat = m_router.handle_append_entries(request.term, request.node_id);
+    if (heartbeat.rfind("RAFT_APPEND ", 0) != 0 || heartbeat.find(" 0") != std::string::npos)
+    {
+        std::lock_guard<std::mutex> lock(m_raft_log_mutex);
+        return "RAFT_APPEND " + std::to_string(m_router.current_term()) + " 0 " +
+               std::to_string(raft_last_log_index_locked()) + "\n";
+    }
+
+    std::lock_guard<std::mutex> lock(m_raft_log_mutex);
+    int last_index = raft_last_log_index_locked();
+    if (request.prev_log_index > last_index)
+    {
+        return "RAFT_APPEND " + std::to_string(m_router.current_term()) + " 0 " +
+               std::to_string(last_index) + "\n";
+    }
+
+    if (request.prev_log_index > 0 && raft_term_at_locked(request.prev_log_index) != request.prev_log_term)
+    {
+        m_raft_log.erase(m_raft_log.begin() + (request.prev_log_index - 1), m_raft_log.end());
+        if (m_raft_commit_index >= request.prev_log_index)
+        {
+            m_raft_commit_index = request.prev_log_index - 1;
+        }
+        if (m_raft_last_applied >= request.prev_log_index)
+        {
+            m_raft_last_applied = request.prev_log_index - 1;
+        }
+        persist_raft_locked();
+        m_router.update_log_info(raft_last_log_index_locked(), raft_last_log_term_locked());
+        return "RAFT_APPEND " + std::to_string(m_router.current_term()) + " 0 " +
+               std::to_string(raft_last_log_index_locked()) + "\n";
+    }
+
+    if (request.entry_count > 0)
+    {
+        auto entries = decode_raft_entries_payload(request.snapshot_payload);
+        if (entries.size() != static_cast<size_t>(request.entry_count))
+        {
+            return "RAFT_APPEND " + std::to_string(m_router.current_term()) + " 0 " +
+                   std::to_string(raft_last_log_index_locked()) + "\n";
+        }
+        int expected_index = request.prev_log_index + 1;
+        for (const auto &entry : entries)
+        {
+            if (entry.index != expected_index)
+            {
+                return "RAFT_APPEND " + std::to_string(m_router.current_term()) + " 0 " +
+                       std::to_string(raft_last_log_index_locked()) + "\n";
+            }
+            if (entry.index > raft_last_log_index_locked() + 1)
+            {
+                return "RAFT_APPEND " + std::to_string(m_router.current_term()) + " 0 " +
+                       std::to_string(raft_last_log_index_locked()) + "\n";
+            }
+            int existing_term = raft_term_at_locked(entry.index);
+            if (existing_term != -1 && existing_term != entry.term)
+            {
+                m_raft_log.erase(m_raft_log.begin() + (entry.index - 1), m_raft_log.end());
+            }
+            if (entry.index == raft_last_log_index_locked() + 1)
+            {
+                m_raft_log.push_back(entry);
+            }
+            ++expected_index;
+        }
+        persist_raft_log_locked();
+        m_router.update_log_info(raft_last_log_index_locked(), raft_last_log_term_locked());
+    }
+    else if (request.log_index > 0)
+    {
+        if (request.log_index > raft_last_log_index_locked() + 1)
+        {
+            return "RAFT_APPEND " + std::to_string(m_router.current_term()) + " 0 " +
+                   std::to_string(raft_last_log_index_locked()) + "\n";
+        }
+
+        int existing_term = raft_term_at_locked(request.log_index);
+        if (existing_term != -1 && existing_term != request.log_term)
+        {
+            m_raft_log.erase(m_raft_log.begin() + (request.log_index - 1), m_raft_log.end());
+            persist_raft_locked();
+        }
+
+        if (request.log_index == raft_last_log_index_locked() + 1)
+        {
+            CommandType entry_type = CommandType::Unknown;
+            if (request.raft_op == "PUT")
+            {
+                entry_type = CommandType::Put;
+            }
+            else if (request.raft_op == "DEL")
+            {
+                entry_type = CommandType::Del;
+            }
+            else if (request.raft_op == "EXPIRE")
+            {
+                entry_type = CommandType::Expire;
+            }
+
+            if (entry_type != CommandType::Unknown)
+            {
+                m_raft_log.push_back({request.log_index,
+                                      request.log_term,
+                                      entry_type,
+                                      request.key,
+                                      request.value,
+                                      request.ttl_seconds});
+                persist_raft_log_locked();
+                m_router.update_log_info(raft_last_log_index_locked(), raft_last_log_term_locked());
+            }
+        }
+    }
+
+    if (request.leader_commit > m_raft_commit_index)
+    {
+        m_raft_commit_index = std::min(request.leader_commit, raft_last_log_index_locked());
+        apply_committed_raft_entries_locked();
+    }
+
+    return "RAFT_APPEND " + std::to_string(m_router.current_term()) + " 1 " +
+           std::to_string(raft_last_log_index_locked()) + "\n";
+}
+
+std::string KVServer::replicate_raft_write(const Request &request)
+{
+    RaftLogEntry entry;
+    std::vector<RaftLogEntry> log_snapshot;
+    int commit_snapshot = 0;
+    {
+        std::lock_guard<std::mutex> lock(m_raft_log_mutex);
+        entry.index = raft_last_log_index_locked() + 1;
+        entry.term = m_router.current_term();
+        entry.type = request.type;
+        entry.key = request.key;
+        entry.value = request.value;
+        entry.ttl_seconds = request.ttl_seconds;
+        m_raft_log.push_back(entry);
+        persist_raft_log_locked();
+        m_router.update_log_info(raft_last_log_index_locked(), raft_last_log_term_locked());
+        log_snapshot = m_raft_log;
+        commit_snapshot = m_raft_commit_index;
+    }
+
+    int acks = 1;
+    for (const auto &follower : m_router.raft_followers())
+    {
+        int next_index = entry.index;
+        bool replicated = false;
+        while (next_index <= entry.index && next_index > 0)
+        {
+            int prev_index = next_index - 1;
+            int prev_term = prev_index > 0 ? log_snapshot[static_cast<size_t>(prev_index - 1)].term : 0;
+            std::vector<RaftLogEntry> to_send;
+            for (int index = next_index; index <= entry.index; ++index)
+            {
+                to_send.push_back(log_snapshot[static_cast<size_t>(index - 1)]);
+            }
+            int response_term = 0;
+            bool success = false;
+            int match_index = 0;
+            std::string response = m_router.forward(follower,
+                                                    encode_raft_append_batch(to_send, prev_index, prev_term, commit_snapshot));
+            if (!parse_raft_append_response(response, response_term, success, match_index))
+            {
+                m_replication_failures_total.fetch_add(1, std::memory_order_relaxed);
+                break;
+            }
+            if (response_term > entry.term)
+            {
+                m_replication_failures_total.fetch_add(1, std::memory_order_relaxed);
+                replicated = false;
+                break;
+            }
+            if (success)
+            {
+                if (match_index >= entry.index)
+                {
+                    replicated = true;
+                    break;
+                }
+                next_index = match_index + 1;
+                continue;
+            }
+            if (match_index < next_index - 1)
+            {
+                next_index = match_index + 1;
+                continue;
+            }
+            m_replication_failures_total.fetch_add(1, std::memory_order_relaxed);
+            break;
+        }
+        if (replicated)
+        {
+            ++acks;
+        }
+    }
+
+    if (acks < m_router.majority_size())
+    {
+        m_replication_failures_total.fetch_add(1, std::memory_order_relaxed);
+        return request.protocol == ProtocolType::Resp
+                   ? resp_error("ERROR raft_no_quorum")
+                   : text_response("ERROR raft_no_quorum");
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(m_raft_log_mutex);
+        if (entry.index > m_raft_commit_index)
+        {
+            m_raft_commit_index = entry.index;
+            apply_committed_raft_entries_locked();
+        }
+        commit_snapshot = m_raft_commit_index;
+    }
+
+    for (const auto &follower : m_router.raft_followers())
+    {
+        m_router.forward(follower, encode_raft_commit(entry.term, commit_snapshot));
+    }
+
+    if (request.protocol == ProtocolType::Resp)
+    {
+        if (request.type == CommandType::Put)
+        {
+            return resp_simple("OK");
+        }
+        return resp_integer(1);
+    }
+    return text_response(request.type == CommandType::Put ? "OK" : "OK");
+}
+
 std::string KVServer::process_request_line(const std::string &line)
 {
     Request request = KVProtocol::parse_request(line);
@@ -730,6 +1456,61 @@ std::string KVServer::process_request_line(const std::string &line)
             return resp_error(request.error);
         }
         return text_response(request.error);
+    }
+
+    if (request.type == CommandType::RaftRequestVote)
+    {
+        std::lock_guard<std::mutex> lock(m_raft_log_mutex);
+        return m_router.handle_request_vote(request.term,
+                                            request.node_id,
+                                            request.last_log_index,
+                                            request.last_log_term);
+    }
+
+    if (request.type == CommandType::RaftAppendEntries)
+    {
+        if (request.log_index >= 0)
+        {
+            return handle_raft_append_entries(request);
+        }
+        return m_router.handle_append_entries(request.term, request.node_id);
+    }
+
+    if (request.type == CommandType::RaftInstallSnapshot)
+    {
+        std::string heartbeat = m_router.handle_append_entries(request.term, request.node_id);
+        if (heartbeat.find(" 0") != std::string::npos)
+        {
+            return "RAFT_SNAPSHOT " + std::to_string(m_router.current_term()) + " 0\n";
+        }
+        if (!install_snapshot_payload(request.snapshot_payload))
+        {
+            return "RAFT_SNAPSHOT " + std::to_string(m_router.current_term()) + " 0\n";
+        }
+        {
+            std::lock_guard<std::mutex> lock(m_raft_log_mutex);
+            m_raft_commit_index = std::max(m_raft_commit_index, request.last_log_index);
+            m_raft_last_applied = std::max(m_raft_last_applied, request.last_log_index);
+            persist_raft_state_locked();
+        }
+        return "RAFT_SNAPSHOT " + std::to_string(m_router.current_term()) + " 1\n";
+    }
+
+    if (request.type == CommandType::RaftStatus)
+    {
+        std::lock_guard<std::mutex> lock(m_raft_log_mutex);
+        return text_response("RAFT_STATUS node=" + m_router.local_id() +
+                             " role=" + m_router.role_name() +
+                             " term=" + std::to_string(m_router.current_term()) +
+                             " leader=" + m_router.leader_id() +
+                             " commit=" + std::to_string(m_raft_commit_index) +
+                             " applied=" + std::to_string(m_raft_last_applied) +
+                             " last_log=" + std::to_string(raft_last_log_index_locked()));
+    }
+
+    if (request.type == CommandType::Metrics)
+    {
+        return metrics_response();
     }
 
     if (m_router.raft_enabled() && m_router.should_route(request) && !m_router.is_leader())
@@ -751,21 +1532,7 @@ std::string KVServer::process_request_line(const std::string &line)
 
     if (m_router.raft_enabled() && is_client_write(request.type) && m_router.is_leader())
     {
-        int acks = 1;
-        std::string raft_command = raft_command_for(request);
-        for (const auto &follower : m_router.raft_followers())
-        {
-            if (response_ok(m_router.forward(follower, raft_command)))
-            {
-                ++acks;
-            }
-        }
-        if (acks < m_router.majority_size())
-        {
-            return request.protocol == ProtocolType::Resp
-                       ? resp_error("ERROR raft_no_quorum")
-                       : text_response("ERROR raft_no_quorum");
-        }
+        return replicate_raft_write(request);
     }
 
     if (!m_router.raft_enabled() && m_router.should_route(request) && !m_router.is_local_owner(request.key))
@@ -892,6 +1659,12 @@ std::string KVServer::process_request_line(const std::string &line)
                    ? resp_integer(ttl)
                    : text_response("TTL " + std::to_string(ttl));
     }
+    case CommandType::RaftRequestVote:
+    case CommandType::RaftAppendEntries:
+    case CommandType::RaftStatus:
+    case CommandType::RaftInstallSnapshot:
+    case CommandType::Metrics:
+        break;
     case CommandType::Unknown:
         break;
     }

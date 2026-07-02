@@ -1,0 +1,21 @@
+services:
+  dashboard:
+    build: .
+    container_name: tinykv-dashboard
+    ports:
+      - "8080:8080"
+      - "9006:9006"
+      - "19021:19021"
+      - "19022:19022"
+      - "19023:19023"
+      - "19024:19024"
+      - "19025:19025"
+    environment:
+      TINYKV_DASHBOARD_HOST: "0.0.0.0"
+      TINYKV_DASHBOARD_PORT: "8080"
+      TINYKV_DASHBOARD_AUTOSTART: "node-1,node-2,node-3,node-4,node-5"
+    volumes:
+      - tinykv-data:/app/data
+
+volumes:
+  tinykv-data:

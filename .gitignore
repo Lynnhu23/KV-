@@ -1,9 +1,36 @@
-bench
-kvserver
-server
-data/
-tests/build/
-*_KVServerLog
-*_ServerLog
+# Build outputs
+/kvserver
+/bench
+/server
 *.o
 *.out
+*.a
+*.so
+
+# CMake/test build directories
+/build/
+/tests/build/
+
+# Runtime data and logs
+/data/
+*.wal
+*.snapshot
+*.log
+*.meta
+*.state
+*_KVServerLog
+*_ServerLog
+KVServerLog
+ServerLog
+
+# Python/editor cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
